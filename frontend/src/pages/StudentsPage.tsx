@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { StudentService, Student } from '../services/student.service';
+import { StudentService, StudentResponse } from '../services/student.service';
 import { Search, Plus, Edit2, Trash2, Download, Eye, X } from 'lucide-react';
 import Pagination from '../components/Pagination';
 import { exportToCsv } from '../utils/exportToCsv';
@@ -8,10 +8,19 @@ import LoadingState from '../components/LoadingState';
 
 export default function StudentsPage() {
   const navigate = useNavigate();
-  const [students, setStudents] = useState<Student[]>([]);
+  const [students, setStudents] = useState<StudentResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedStudent, setSelectedStudent] = useState<any>(null); // Para el modal de ver
+  
+  // Estados para el modal de Ver
+  const [selectedStudent, setSelectedStudent] = useState<any>(null);
+
+  // Estados para el modal de Editar
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingStudent, setEditingStudent] = useState<any>(null);
+  const [editFormData, setEditFormData] = useState({
+    name1: '', lastName1: '', email: '', phone: '', address: '', grade: '', section: '', docType: 'DNI', docNumber: '', isActive: true
+  });
   
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 8;
@@ -20,9 +29,14 @@ export default function StudentsPage() {
 
   const loadStudents = async () => {
     setLoading(true);
-    const data = await StudentService.getAll();
-    setStudents(data);
-    setLoading(false);
+    try {
+      const data = await StudentService.getAll();
+      setStudents(data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleDelete = async (id: number) => {
@@ -30,9 +44,49 @@ export default function StudentsPage() {
       try {
         await StudentService.delete(id);
         loadStudents();
-      } catch (err) {
-        alert("Error al eliminar estudiante.");
+      } catch (err: any) {
+        alert(err.response?.data?.detail || "Error al eliminar estudiante. Revisa la consola.");
       }
+    }
+  };
+
+  const handleOpenEditModal = (student: any) => {
+    setEditingStudent(student);
+    setEditFormData({
+      name1: student.student.name1 || '',
+      lastName1: student.student.lastName1 || '',
+      email: student.student.email || '',
+      phone: student.student.phone || '',
+      address: student.student.address || '',
+      grade: student.student.grade || '',
+      section: student.student.section || '',
+      docType: student.student.docType || 'DNI',
+      docNumber: student.student.docNumber || '',
+      isActive: student.student.isActive !== undefined ? student.student.isActive : true
+    });
+    setIsEditModalOpen(true);
+  };
+
+  const handleSaveEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const payload = {
+        name1: editFormData.name1,
+        lastName1: editFormData.lastName1,
+        email: editFormData.email,
+        phone: editFormData.phone,
+        address: editFormData.address,
+        grade: editFormData.grade,
+        section: editFormData.section,
+        docType: editFormData.docType,
+        docNumber: editFormData.docNumber,
+        isActive: editFormData.isActive
+      };
+      await StudentService.update(editingStudent.id, payload);
+      setIsEditModalOpen(false);
+      loadStudents();
+    } catch (err: any) {
+      alert(err.response?.data?.detail || "Error al actualizar estudiante.");
     }
   };
 
@@ -117,8 +171,7 @@ export default function StudentsPage() {
                   </td>
                   <td className="py-4 px-4 text-right flex justify-end gap-2">
                     <button onClick={() => setSelectedStudent(s)} className="p-2 text-slate-400 hover:text-blue-500 rounded-lg transition-colors"><Eye size={18} /></button>
-                    {/* El lapiz te lleva a la pantalla de edición (debes crearla o usar el mismo wizard con ID) */}
-                    <button onClick={() => navigate(`/students/edit/${s.id}`)} className="p-2 text-blue-500 hover:bg-blue-50 dark:hover:bg-slate-700 rounded-lg transition-colors"><Edit2 size={18} /></button>
+                    <button onClick={() => handleOpenEditModal(s)} className="p-2 text-blue-500 hover:bg-blue-50 dark:hover:bg-slate-700 rounded-lg transition-colors"><Edit2 size={18} /></button>
                     <button onClick={() => handleDelete(s.id)} className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-slate-700 rounded-lg transition-colors"><Trash2 size={18} /></button>
                   </td>
                 </tr>
@@ -144,6 +197,36 @@ export default function StudentsPage() {
               <p className="flex justify-between"><span className="text-slate-500">Tutor:</span> <span className="font-bold dark:text-white">{selectedStudent.student?.tutorName}</span></p>
               <p className="flex justify-between"><span className="text-slate-500">Curso:</span> <span className="font-bold dark:text-white">{selectedStudent.student?.grade} {selectedStudent.student?.section}</span></p>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Editar Estudiante */}
+      {isEditModalOpen && editingStudent && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
+          <div className="glass-card w-full max-w-md p-8 relative dark:bg-slate-800 dark:border-slate-700">
+            <button onClick={() => setIsEditModalOpen(false)} className="absolute top-6 right-6 text-slate-400"><X size={24} /></button>
+            <h2 className="text-2xl font-display font-bold mb-6 dark:text-white">Editar Estudiante</h2>
+            <form onSubmit={handleSaveEdit} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div><label className="block text-sm font-bold mb-1 dark:text-slate-300">Nombres</label><input type="text" required value={editFormData.name1} onChange={(e) => setEditFormData({...editFormData, name1: e.target.value})} className="w-full px-4 py-2 rounded-xl border dark:bg-slate-700/50 dark:text-white dark:border-slate-600" /></div>
+                <div><label className="block text-sm font-bold mb-1 dark:text-slate-300">Apellidos</label><input type="text" required value={editFormData.lastName1} onChange={(e) => setEditFormData({...editFormData, lastName1: e.target.value})} className="w-full px-4 py-2 rounded-xl border dark:bg-slate-700/50 dark:text-white dark:border-slate-600" /></div>
+              </div>
+              <div><label className="block text-sm font-bold mb-1 dark:text-slate-300">Email</label><input type="email" required value={editFormData.email} onChange={(e) => setEditFormData({...editFormData, email: e.target.value})} className="w-full px-4 py-2 rounded-xl border dark:bg-slate-700/50 dark:text-white dark:border-slate-600" /></div>
+              <div><label className="block text-sm font-bold mb-1 dark:text-slate-300">Teléfono</label><input type="text" required value={editFormData.phone} onChange={(e) => setEditFormData({...editFormData, phone: e.target.value})} className="w-full px-4 py-2 rounded-xl border dark:bg-slate-700/50 dark:text-white dark:border-slate-600" /></div>
+              <div className="grid grid-cols-2 gap-4">
+                <div><label className="block text-sm font-bold mb-1 dark:text-slate-300">Grado</label><input type="text" required value={editFormData.grade} onChange={(e) => setEditFormData({...editFormData, grade: e.target.value})} className="w-full px-4 py-2 rounded-xl border dark:bg-slate-700/50 dark:text-white dark:border-slate-600" /></div>
+                <div><label className="block text-sm font-bold mb-1 dark:text-slate-300">Sección</label><input type="text" required value={editFormData.section} onChange={(e) => setEditFormData({...editFormData, section: e.target.value})} className="w-full px-4 py-2 rounded-xl border dark:bg-slate-700/50 dark:text-white dark:border-slate-600" /></div>
+              </div>
+              <div className="flex items-center gap-3 pt-2">
+                <input type="checkbox" checked={editFormData.isActive} onChange={(e) => setEditFormData({...editFormData, isActive: e.target.checked})} className="w-5 h-5 text-purple-600 rounded" />
+                <label className="text-sm font-medium dark:text-slate-300">¿Estudiante activo?</label>
+              </div>
+              <div className="flex justify-end gap-3 pt-4">
+                <button type="button" onClick={() => setIsEditModalOpen(false)} className="px-6 py-2 rounded-xl text-slate-600 dark:text-slate-300 font-semibold hover:bg-white/50 dark:hover:bg-slate-700/50">Cancelar</button>
+                <button type="submit" className="btn-lyra px-6 py-2">Guardar Cambios</button>
+              </div>
+            </form>
           </div>
         </div>
       )}

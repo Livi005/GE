@@ -88,9 +88,9 @@ export default function MeansPage() {
       try {
         if (activeTab === 'tech') await MeansService.deleteTechnological(id);
         else await MeansService.deleteAuxiliary(id);
-        loadMeans();
-      } catch {
-        alert("Error al eliminar.");
+        loadMeans(); // Recargar la lista
+      } catch (error: any) {
+        alert("Error al eliminar: " + (error.response?.data?.detail || "Revisa la consola"));
       }
     }
   };

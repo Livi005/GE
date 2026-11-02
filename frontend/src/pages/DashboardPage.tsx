@@ -3,19 +3,20 @@ import AdminDashboard from './AdminDashboard';
 import SecretaryDashboard from './SecretaryDashboard';
 import ProfessorDashboard from './ProfessorDashboard';
 import StudentDashboard from './StudentDashboard';
+import MaintenanceDashboard from './MaintenanceDashboard'; // NUEVO
+import YearHeadDashboard from './YearHeadDashboard'; // NUEVO
 import LoadingState from '../components/LoadingState';
 
 export default function DashboardPage() {
   const { role } = useAuthStore();
 
-  // Mapeo robusto por rol
   const dashboards: Record<string, React.ReactNode> = {
     'Director': <AdminDashboard />,
     'Secretary': <SecretaryDashboard />,
     'Professor': <ProfessorDashboard />,
     'Student': <StudentDashboard />,
-    'YearHead': <AdminDashboard />, // Por ahora usa el de Director
-    'Maintenance': <AdminDashboard />, // Por ahora usa el de Director
+    'Maintenance': <MaintenanceDashboard />, // NUEVO
+    'YearHead': <YearHeadDashboard />, // NUEVO
   };
 
   return dashboards[role || ''] || <LoadingState message="Cargando..." />;

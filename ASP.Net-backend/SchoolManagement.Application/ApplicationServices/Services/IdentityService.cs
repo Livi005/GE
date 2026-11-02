@@ -139,4 +139,12 @@ public class IdentityService : IIdentityService
 
         return Result.Success();
     }
+        public async Task<Result> DeleteUserAsync(string userId, CancellationToken cancellationToken = default)
+    {
+        var (succeeded, errors) = await _identityManager.DeleteUserAsync(userId);
+        if (!succeeded)
+            return Result.Failure(Error.Validation(string.Join(", ", errors)));
+
+        return Result.Success();
+    }
 }

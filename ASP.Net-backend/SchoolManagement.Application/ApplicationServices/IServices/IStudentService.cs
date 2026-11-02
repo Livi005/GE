@@ -8,5 +8,9 @@ public interface IStudentService : IBaseService<StudentDto, StudentResponseDto>
     Task<Result<StudentCreateResponseDto>> CreateWithUserAsync(
         StudentDto dto, CancellationToken cancellationToken = default);
 
-    Task<Result<IReadOnlyList<StudentInfoBad>>> GetBadStudentsAsync(CancellationToken cancellationToken = default);
+    Task<Result<IReadOnlyList<StudentInfoBad>>> GetBadStudentsAsync(
+        CancellationToken cancellationToken = default);
+
+    Task<Result<IReadOnlyList<StudentGradeDto>>> GetMyGradesAsync(
+        string userName, CancellationToken cancellationToken = default);
 }

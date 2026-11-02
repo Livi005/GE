@@ -222,4 +222,84 @@ public class DashboardService : IDashboardService
             UpcomingDeadlines = new List<EventBriefDto>()
         });
     }
+
+        // ---------- Dashboard Maintenance ----------
+    public async Task<Result<MaintenanceDashboardDto>> GetMaintenanceDashboardAsync(
+        CancellationToken cancellationToken = default)
+    {
+        var totalClassRooms = await _unitOfWork.Repository<ClassRoom>().Query()
+            .CountAsync(c => !c.IsDeleted, cancellationToken);
+        var totalTechMeans = await _unitOfWork.Repository<TechnologicalMeans>().Query()
+            .CountAsync(t => !t.IsDeleted, cancellationToken);
+        var totalAuxMeans = await _unitOfWork.Repository<AuxiliaryMeans>().Query()
+            .CountAsync(a => !a.IsDeleted, cancellationToken);
+
+        var maintenances = await _unitOfWork.Repository<Maintenance>().Query()
+            .OrderByDescending(m => m.MaintenanceDate)
+            .Take(10)
+            .ToListAsync(cancellationToken);
+
+        var totalMaintenances = await _unitOfWork.Repository<Maintenance>().Query()
+            .CountAsync(cancellationToken);
+
+        var recent = maintenances.Select(m => new MaintenanceBriefDto
+        {
+            Id = m.IdM,
+            MeanName = m.AuxMean?.NameMean ?? m.TechnologicalMean?.NameMean ?? "—",
+            Type = m.TypeOfMean.ToString(),
+            Date = m.MaintenanceDate,
+            Cost = m.Cost
+        }).ToList();
+
+        return Result.Success(new MaintenanceDashboardDto
+        {
+            TotalClassRooms = totalClassRooms,
+            TotalTechMeans = totalTechMeans,
+            TotalAuxMeans = totalAuxMeans,
+            TotalMaintenances = totalMaintenances,
+            PendingMaintenances = 0,
+            RecentMaintenances = recent
+        });
+    }
+
+    // ---------- Dashboard YearHead ----------
+    public async Task<Result<YearHeadDashboardDto>> GetYearHeadDashboardAsync(
+        string userName, CancellationToken cancellationToken = default)
+    {
+        var user = await _identityManager.FindByUserNameAsync(userName);
+        if (user is null) return Result.NotFound<YearHeadDashboardDto>("User", userName);
+
+        var yearHead = await _unitOfWork.Repository<YearHead>().Query()
+            .FirstOrDefaultAsync(y => y.UserId == user.Id, cancellationToken);
+        if (yearHead is null) return Result.NotFound<YearHeadDashboardDto>("YearHead", userName);
+
+        var courses = await _unitOfWork.Repository<Course>().Query()
+            .ToListAsync(cancellationToken);
+        var totalSubjects = await _unitOfWork.Repository<Subject>().Query()
+            .CountAsync(s => !s.IsDeleted, cancellationToken);
+
+        var courseDtos = new List<YearHeadCourseDto>();
+        foreach (var course in courses)
+        {
+            var studentCount = await _unitOfWork.Repository<Student>().Query()
+                .CountAsync(s => s.IdC == course.IdC && !s.IsDeleted, cancellationToken);
+            courseDtos.Add(new YearHeadCourseDto
+            {
+                IdC = course.IdC,
+                CourseName = course.CourseName,
+                StudentCount = studentCount
+            });
+        }
+
+        var totalStudents = courseDtos.Sum(c => c.StudentCount);
+
+        return Result.Success(new YearHeadDashboardDto
+        {
+            YearHeadName = yearHead.NameYearHead,
+            TotalCourses = courses.Count,
+            TotalSubjects = totalSubjects,
+            TotalStudents = totalStudents,
+            Courses = courseDtos
+        });
+    }
 }

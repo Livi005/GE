@@ -62,4 +62,14 @@ public class IdentityManager : IIdentityManager
         if (user is null) return Array.Empty<string>();
         return (await _userManager.GetRolesAsync(user)).ToList();
     }
+
+        public async Task<(bool Succeeded, IEnumerable<string> Errors)> DeleteUserAsync(string userId)
+    {
+        var user = await _userManager.FindByIdAsync(userId);
+        if (user is null)
+            return (false, new[] { $"User '{userId}' not found." });
+
+        var result = await _userManager.DeleteAsync(user);
+        return (result.Succeeded, result.Errors.Select(e => e.Description));
+    }
 }

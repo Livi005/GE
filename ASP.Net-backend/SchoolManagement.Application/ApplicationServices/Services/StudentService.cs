@@ -8,6 +8,7 @@ using SchoolManagement.Domain.Common;
 using SchoolManagement.Domain.Entities;
 using SchoolManagement.Domain.Relations;
 using SchoolManagement.Infrastructure.Common.GenericInterface;
+using SchoolManagement.Infrastructure.Identity;
 
 namespace SchoolManagement.Application.ApplicationServices.Services;
 
@@ -17,6 +18,7 @@ public class StudentService
     private readonly IUserRegistrationService _userRegistration;
     private readonly IValidationService _validation;
     private readonly IAverageCalculator _average;
+    private readonly IIdentityManager _identityManager;
 
     public StudentService(
         IUnitOfWork unitOfWork,
@@ -24,13 +26,16 @@ public class StudentService
         ILogger<StudentService> logger,
         IUserRegistrationService userRegistration,
         IValidationService validation,
-        IAverageCalculator average)
+        IAverageCalculator average,
+        IIdentityManager identityManager)   
         : base(unitOfWork, mapper, logger)
     {
         _userRegistration = userRegistration;
         _validation = validation;
         _average = average;
+        _identityManager = identityManager;   
     }
+
 
     public override Task<Result<StudentResponseDto>> CreateAsync(
         StudentDto dto, CancellationToken cancellationToken = default)
@@ -157,5 +162,33 @@ public class StudentService
         }
 
         return Result.Success<IReadOnlyList<StudentInfoBad>>(result);
+    }
+
+    public async Task<Result<IReadOnlyList<StudentGradeDto>>> GetMyGradesAsync(
+        string userName, CancellationToken cancellationToken = default)
+    {
+        var user = await _identityManager.FindByUserNameAsync(userName);
+        if (user is null)
+            return Result.NotFound<IReadOnlyList<StudentGradeDto>>("User", userName);
+
+        var student = await UnitOfWork.Repository<Student>().Query()
+            .FirstOrDefaultAsync(s => s.UserId == user.Id, cancellationToken);
+        if (student is null)
+            return Result.NotFound<IReadOnlyList<StudentGradeDto>>("Student", userName);
+
+        var grades = await UnitOfWork.Repository<ProfessorStudentSubject>().Query()
+            .Include(pss => pss.StudentSubject).ThenInclude(ss => ss.Subject)
+            .Include(pss => pss.Professor)
+            .Where(pss => pss.StudentSubject.IdStud == student.IdStud)
+            .Select(pss => new StudentGradeDto
+            {
+                IdSub = pss.StudentSubject.IdSub,
+                SubjectName = pss.StudentSubject.Subject.NameSub,
+                Grade = pss.StudentGrades,
+                TeacherName = pss.Professor.NameProf
+            })
+            .ToListAsync(cancellationToken);
+
+        return Result.Success<IReadOnlyList<StudentGradeDto>>(grades);
     }
 }

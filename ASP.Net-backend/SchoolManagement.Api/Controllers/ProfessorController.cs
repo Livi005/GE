@@ -20,10 +20,12 @@ public class ProfessorController : ControllerBase
         => this.ToActionResult(await _service.CreateWithUserAsync(dto, ct), created: true);
 
     [HttpGet("list")]
+    [Authorize(Roles = $"{Roles.SuperAdmin},{Roles.Director},{Roles.Secretary},{Roles.YearHead}")]
     public async Task<IActionResult> List(CancellationToken ct)
         => this.ToActionResult(await _service.ListAsync(ct));
 
     [HttpGet("{id:int}")]
+    [Authorize(Roles = $"{Roles.SuperAdmin},{Roles.Director},{Roles.Secretary},{Roles.YearHead}")]
     public async Task<IActionResult> GetById(int id, CancellationToken ct)
         => this.ToActionResult(await _service.GetByIdAsync(id, ct));
 
@@ -32,7 +34,7 @@ public class ProfessorController : ControllerBase
         => this.ToActionResult(await _service.UpdateAsync(id, dto, ct));
 
     [HttpDelete("delete/{id:int}")]
-    [Authorize(Roles = Roles.SuperAdmin)]
+    [Authorize(Roles = $"{Roles.SuperAdmin},{Roles.Director}")]
     public async Task<IActionResult> Delete(int id, CancellationToken ct)
         => this.ToActionResult(await _service.DeleteAsync(id, ct));
 

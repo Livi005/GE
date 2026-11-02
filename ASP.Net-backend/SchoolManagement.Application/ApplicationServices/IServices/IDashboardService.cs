@@ -10,4 +10,6 @@ public interface IDashboardService
     Task<Result<IReadOnlyList<ClassRoomAvailabilityDto>>> GetAvailableClassRoomsAsync();
     Task<Result<AdminDashboardDto>> GetAdminDashboardAsync(CancellationToken cancellationToken = default);
     Task<Result<SecretaryDashboardDto>> GetSecretaryDashboardAsync(CancellationToken cancellationToken = default);
+    Task<Result<MaintenanceDashboardDto>> GetMaintenanceDashboardAsync(CancellationToken cancellationToken = default);
+    Task<Result<YearHeadDashboardDto>> GetYearHeadDashboardAsync(string userName, CancellationToken cancellationToken = default);
 }

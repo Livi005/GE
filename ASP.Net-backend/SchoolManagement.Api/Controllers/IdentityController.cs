@@ -62,4 +62,9 @@ public class IdentityController : ControllerBase
         var result = await _service.ChangePasswordAsync(userName, dto, ct);
         return this.ToActionResult(result);
     }
+
+    [HttpDelete("delete/{userId}")]
+    [Authorize(Roles = Roles.SuperAdmin)]
+    public async Task<IActionResult> DeleteUser(string userId, CancellationToken ct)
+        => this.ToActionResult(await _service.DeleteUserAsync(userId, ct));
 }

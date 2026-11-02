@@ -15,4 +15,6 @@ public interface IIdentityService
     Task<IReadOnlyList<User>> ListUsersAsync(CancellationToken cancellationToken = default);
 
     Task<Result> ChangePasswordAsync(string userName, ChangePasswordDto dto, CancellationToken cancellationToken = default);
+
+    Task<Result> DeleteUserAsync(string userId, CancellationToken cancellationToken = default);
 }

@@ -20,10 +20,12 @@ public class TechnologicalMeansController : ControllerBase
         => this.ToActionResult(await _service.CreateAsync(dto, ct), created: true);
 
     [HttpGet("list")]
+    [Authorize(Roles = $"{Roles.SuperAdmin},{Roles.Director},{Roles.Maintenance},{Roles.Professor},{Roles.YearHead}")]
     public async Task<IActionResult> List(CancellationToken ct)
         => this.ToActionResult(await _service.ListAsync(ct));
 
     [HttpGet("{id:int}")]
+    [Authorize(Roles = $"{Roles.SuperAdmin},{Roles.Director},{Roles.Maintenance},{Roles.Professor},{Roles.YearHead}")]
     public async Task<IActionResult> GetById(int id, CancellationToken ct)
         => this.ToActionResult(await _service.GetByIdAsync(id, ct));
 

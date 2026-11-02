@@ -9,8 +9,10 @@ public interface IIdentityManager
     Task<User?> FindByUserNameAsync(string username);
     IReadOnlyList<User> ListUsers();
 
-        Task<(bool Succeeded, IEnumerable<string> Errors)> ChangePasswordAsync(
+    Task<(bool Succeeded, IEnumerable<string> Errors)> ChangePasswordAsync(
         string userId, string currentPassword, string newPassword);
 
     Task<IReadOnlyList<string>> GetRolesAsync(string userId);
+
+    Task<(bool Succeeded, IEnumerable<string> Errors)> DeleteUserAsync(string userId);
 }

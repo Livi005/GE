@@ -14,9 +14,7 @@ public class DashboardController : ControllerBase
     private readonly IDashboardService _dashboardService;
 
     public DashboardController(IDashboardService dashboardService)
-    {
-        _dashboardService = dashboardService;
-    }
+        => _dashboardService = dashboardService;
 
     [HttpGet("student/{userName}")]
     [Authorize(Roles = $"{Roles.Student},{Roles.SuperAdmin}")]
@@ -29,11 +27,11 @@ public class DashboardController : ControllerBase
         => this.ToActionResult(await _dashboardService.GetProfessorDashboardAsync(userName));
 
     [HttpGet("classrooms/available")]
-    [Authorize(Roles = $"{Roles.Professor},{Roles.SuperAdmin}")]
+    [Authorize(Roles = $"{Roles.Professor},{Roles.SuperAdmin},{Roles.Director},{Roles.Maintenance}")]
     public async Task<IActionResult> GetAvailableClassRooms(CancellationToken ct)
         => this.ToActionResult(await _dashboardService.GetAvailableClassRoomsAsync());
 
-        [HttpGet("admin")]
+    [HttpGet("admin")]
     [Authorize(Roles = $"{Roles.SuperAdmin},{Roles.Director}")]
     public async Task<IActionResult> GetAdminDashboard(CancellationToken ct)
         => this.ToActionResult(await _dashboardService.GetAdminDashboardAsync(ct));
@@ -42,4 +40,14 @@ public class DashboardController : ControllerBase
     [Authorize(Roles = $"{Roles.SuperAdmin},{Roles.Director},{Roles.Secretary}")]
     public async Task<IActionResult> GetSecretaryDashboard(CancellationToken ct)
         => this.ToActionResult(await _dashboardService.GetSecretaryDashboardAsync(ct));
+
+    [HttpGet("maintenance")]
+    [Authorize(Roles = $"{Roles.SuperAdmin},{Roles.Director},{Roles.Maintenance}")]
+    public async Task<IActionResult> GetMaintenanceDashboard(CancellationToken ct)
+        => this.ToActionResult(await _dashboardService.GetMaintenanceDashboardAsync(ct));
+
+    [HttpGet("yearhead/{userName}")]
+    [Authorize(Roles = $"{Roles.SuperAdmin},{Roles.Director},{Roles.YearHead}")]
+    public async Task<IActionResult> GetYearHeadDashboard(string userName, CancellationToken ct)
+        => this.ToActionResult(await _dashboardService.GetYearHeadDashboardAsync(userName, ct));
 }

@@ -43,6 +43,7 @@ public static class DependencyInjection
         services.AddScoped<IProfessorService, ProfessorService>();
         services.AddScoped<ISecretaryService, SecretaryService>();
         services.AddScoped<IStudentService, StudentService>();
+        services.AddScoped<IProfessorEvaluationService, ProfessorEvaluationService>();
 
         // ---- Fase 4 ----
         services.AddScoped<IProfessorStudentSubjectService, ProfessorStudentSubjectService>();

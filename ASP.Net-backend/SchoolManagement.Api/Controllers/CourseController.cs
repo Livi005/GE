@@ -9,30 +9,34 @@ namespace SchoolManagement.Api.Controllers;
 
 [ApiController]
 [Route("course")]
-[Authorize(Roles = $"{Roles.SuperAdmin},{Roles.Director},{Roles.Secretary}")]
+[Authorize]
 public class CourseController : ControllerBase
 {
     private readonly ICourseService _service;
     public CourseController(ICourseService service) => _service = service;
 
     [HttpPost("create")]
+    [Authorize(Roles = $"{Roles.SuperAdmin},{Roles.Director},{Roles.Secretary}")]
     public async Task<IActionResult> Create([FromBody] CourseDto dto, CancellationToken ct)
         => this.ToActionResult(await _service.CreateAsync(dto, ct), created: true);
 
     [HttpGet("list")]
+    [Authorize(Roles = $"{Roles.SuperAdmin},{Roles.Director},{Roles.Secretary},{Roles.Professor},{Roles.Student},{Roles.YearHead}")]
     public async Task<IActionResult> List(CancellationToken ct)
         => this.ToActionResult(await _service.ListAsync(ct));
 
     [HttpGet("{id:int}")]
+    [Authorize(Roles = $"{Roles.SuperAdmin},{Roles.Director},{Roles.Secretary},{Roles.Professor},{Roles.Student},{Roles.YearHead}")]
     public async Task<IActionResult> GetById(int id, CancellationToken ct)
         => this.ToActionResult(await _service.GetByIdAsync(id, ct));
 
     [HttpPut("update/{id:int}")]
+    [Authorize(Roles = $"{Roles.SuperAdmin},{Roles.Director},{Roles.Secretary}")]
     public async Task<IActionResult> Update(int id, [FromBody] CourseDto dto, CancellationToken ct)
         => this.ToActionResult(await _service.UpdateAsync(id, dto, ct));
 
     [HttpDelete("delete/{id:int}")]
-    [Authorize(Roles = Roles.SuperAdmin)]
+    [Authorize(Roles = $"{Roles.SuperAdmin},{Roles.Director},{Roles.Secretary}")]
     public async Task<IActionResult> Delete(int id, CancellationToken ct)
         => this.ToActionResult(await _service.DeleteAsync(id, ct));
 }

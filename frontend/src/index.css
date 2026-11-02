@@ -1,0 +1,82 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  @apply text-slate-800 font-sans antialiased min-h-screen relative;
+}
+
+/* ==========================================
+   TARJETAS DE CRISTAL
+   ========================================== */
+.glass-card {
+  @apply bg-white/40 backdrop-blur-xl border border-white/60 shadow-[0_8px_32px_rgba(0,0,0,0.05)] rounded-[2rem];
+}
+
+.dark .glass-card {
+  @apply bg-slate-900/30 backdrop-blur-xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.3)];
+}
+
+/* ==========================================
+   BOTONES
+   ========================================== */
+.btn-lyra {
+  @apply bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 text-white font-bold rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-purple-500/40 hover:opacity-90 active:scale-95;
+}
+
+/* ==========================================
+   TABLAS EN MODO OSCURO (Textos claros)
+   ========================================== */
+.dark table th {
+  @apply text-slate-300 border-white/10;
+}
+.dark table td {
+  @apply text-slate-100 border-white/10;
+}
+
+.dark table tbody tr:hover {
+  @apply bg-white/10;
+}
+
+/* Inputs y Selects en modo oscuro */
+.dark input, 
+.dark select, 
+.dark textarea {
+  @apply text-white bg-slate-800 border-slate-600 placeholder-slate-400;
+}
+
+/* ==========================================
+   FORZAR LEGIBILIDAD EN TABLAS MODO OSCURO
+   ========================================== */
+.dark table th {
+  @apply text-slate-300 border-white/10;
+}
+
+.dark table td {
+  @apply text-slate-200 border-white/10;
+}
+
+/* Asegurar que el texto dentro de las celdas sea claro */
+.dark table td * {
+  @apply text-slate-200;
+}
+
+.dark table td span.text-slate-600 { @apply text-slate-400; }
+.dark table td span.text-slate-800 { @apply text-slate-200; }
+
+.dark table tbody tr:hover {
+  @apply bg-white/10;
+}
+
+/* Arreglar letras en todas las tablas del sistema */
+.dark table th {
+  @apply text-slate-300 border-white/10;
+}
+.dark table td {
+  @apply text-slate-200 border-white/10;
+}
+.dark table tbody tr:hover {
+  @apply bg-white/10;
+}

@@ -1,0 +1,12 @@
+namespace SchoolManagement.Application.ApplicationServices.Maps_Dto.Notification;
+
+public class NotificationDto
+{
+    public int Id { get; set; }
+    public string Title { get; set; } = string.Empty;
+    public string Message { get; set; } = string.Empty;
+    public string Type { get; set; } = "Info";
+    public string? Module { get; set; }
+    public bool IsRead { get; set; }
+    public DateTime CreatedAt { get; set; }
+}

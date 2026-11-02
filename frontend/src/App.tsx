@@ -23,6 +23,7 @@ import StudentSchedulePage from './pages/StudentSchedulePage';
 import StudentProfessorsPage from './pages/StudentProfessorsPage';
 import ProfessorSchedulePage from './pages/ProfessorSchedulePage'; // NUEVO
 import { useAuthStore } from './store/authStore';
+import ReservePage from './pages/ReservePage';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const token = useAuthStore((state) => state.token);
@@ -66,6 +67,7 @@ function App() {
 
         {/* PROFESOR */}
         <Route path="/prof-schedule" element={<ProtectedRoute><AppLayout><ProfessorSchedulePage /></AppLayout></ProtectedRoute>} /> 
+        <Route path="/reserve" element={<ProtectedRoute><AppLayout><ReservePage /></AppLayout></ProtectedRoute>} />
         {/* NOTA: Añadir en el menú del profesor la ruta /prof-schedule */}
         
         <Route path="*" element={<Navigate to="/dashboard" replace />} />

@@ -3,7 +3,8 @@ import { useAuthStore } from '../store/authStore';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { 
   Home, Users, GraduationCap, BookOpen, CalendarDays, Settings, LogOut, Bell, Search, FileText, Library, Compass,
-  ShieldCheck, Building2, ScrollText, UserCog, School, Monitor, Calendar
+  ShieldCheck, Building2, ScrollText, UserCog, School, Monitor, Calendar,
+  Building
 } from 'lucide-react';
 
 export default function AppLayout({ children }: { children: ReactNode }) {
@@ -72,6 +73,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
     { name: 'Asistencias', path: '/attendance', icon: CalendarDays, roles: ['Professor'] },
     { name: 'Mi Horario', path: '/prof-schedule', icon: Calendar, roles: ['Professor'] },
     { name: 'Estudiantes', path: '/students', icon: Users, roles: ['Professor'] },
+    { name: 'Reservar Aulas/Medios', path: '/reserve', icon: Building, roles: ['Professor'] },
 
     // STUDENT
     { name: 'Inicio', path: '/dashboard', icon: Home, roles: ['Student'] },

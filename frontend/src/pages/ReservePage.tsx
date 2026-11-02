@@ -1,57 +1,83 @@
 import { useState, useEffect } from 'react';
 import { useAuthStore } from '../store/authStore';
-import { ReservationService } from '../services/reservation.service';
-import { BookOpen, CheckCircle, ArrowRight, ArrowLeft, Check } from 'lucide-react';
-import { apiClient } from '../api/client'; 
+import { apiClient } from '../api/client';
+import { ClassRoomService } from '../services/classroom.service';
+import { MeansService } from '../services/means.service';
+import { BookOpen, CheckCircle, ArrowRight, ArrowLeft, Check, Monitor, School } from 'lucide-react';
+import LoadingState from '../components/LoadingState';
 
 export default function ReservePage() {
   const { userName } = useAuthStore();
   const [subjects, setSubjects] = useState<any[]>([]);
+  const [classRooms, setClassRooms] = useState<any[]>([]);
+  const [means, setMeans] = useState<any[]>([]);
+  
   const [step, setStep] = useState(1);
   
-  const [selectedSubject, setSelectedSubject] = useState('');
-  const [selectedClassRoom, setSelectedClassRoom] = useState('');
+  const [selectedSubject, setSelectedSubject] = useState<any>(null);
+  const [selectedClassRoom, setSelectedClassRoom] = useState<any>(null);
+  const [selectedMeans, setSelectedMeans] = useState<number[]>([]);
   
   const [loading, setLoading] = useState(true);
   const [success, setSuccess] = useState(false);
 
   useEffect(() => {
-    if (userName) loadSubjects();
+    if (!userName) return;
+    
+    // Cargar datos reales
+    const loadData = async () => {
+      setLoading(true);
+      try {
+        const subs = await apiClient.get(`/professorStudentSubject/getsubjects?userName=${userName}`).then(r => r.data?.value || r.data || []);
+        const rooms = await ClassRoomService.getAll();
+        const techMeans = await MeansService.getTechnological();
+        const auxMeans = await MeansService.getAuxiliary();
+        
+        setSubjects(subs);
+        setClassRooms(rooms.filter((r: any) => r.isAviable)); // Solo disponibles
+        setMeans([...techMeans, ...auxMeans].filter((m: any) => m.isAviable));
+      } catch (err) {
+        console.error("Error cargando datos para reserva:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadData();
   }, [userName]);
 
-  const loadSubjects = async () => {
-    setLoading(true);
-    const data = await ReservationService.getSubjects(userName!);
-    setSubjects(data);
-    setLoading(false);
+  const handleToggleMean = (id: number) => {
+    if (selectedMeans.includes(id)) setSelectedMeans(selectedMeans.filter(m => m !== id));
+    else setSelectedMeans([...selectedMeans, id]);
   };
 
   const handleReserve = async () => {
     try {
+      // El Backend espera el payload exacto para crear la reserva
       const payload = {
         userName: userName,
-        subjectName: selectedSubject,
-        reserveMeans: {}, 
+        idSub: selectedSubject.idSub,
+        idClassR: selectedClassRoom.idClassR,
+        means: selectedMeans,
         reserve: true
       };
       
+      // NOTA: El endpoint puede variar según el Backend. Usamos el que dice el informe.
       const res = await apiClient.post('/classroommeans/reserveClassRoomAndMeans', payload);
-      if (res.success) {
-
+      
+      // Según el informe, el backend devuelve un resultado directo o un error
+      if (res.status === 200) {
         setSuccess(true);
-        setTimeout(() => { setSuccess(false); setStep(1); setSelectedSubject(''); }, 3000);
-      } else {
-            alert("El aula ya está ocupada o hubo un error.");
+        setTimeout(() => { setSuccess(false); setStep(1); setSelectedSubject(null); setSelectedClassRoom(null); setSelectedMeans([]); }, 3000);
       }
     } catch (error: any) {
-      console.error(error.response?.data || error);
-      alert("Error al conectar con el servidor. Revisa la consola.");
+      alert("Error al reservar: " + (error.response?.data?.detail || "El aula o medio ya está ocupado."));
     }
   };
 
+  if (loading) return <LoadingState message="Cargando datos de reserva..." />;
+
   return (
     <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      
       <div>
         <h1 className="text-3xl font-display font-bold text-slate-800 dark:text-white">Reserva de Aulas y Medios</h1>
         <p className="text-slate-500 dark:text-slate-400">Sigue los pasos para reservar un espacio.</p>
@@ -81,22 +107,17 @@ export default function ReservePage() {
         {/* PASO 1: Asignatura */}
         {step === 1 && (
           <div className="animate-in fade-in slide-in-from-right-4">
-            <h2 className="text-2xl font-bold text-slate-800 dark:text-white mb-6">Selecciona una asignatura</h2>
-            {loading ? (
-              <p className="text-slate-500 dark:text-slate-400">Cargando asignaturas...</p>
-            ) : subjects.length === 0 ? (
-              <div className="text-center py-10">
-                <BookOpen className="mx-auto text-slate-300 dark:text-slate-600 mb-4" size={48} />
-                <p className="text-slate-500 dark:text-slate-400">No tienes asignaturas asignadas para reservar.</p>
-              </div>
+            <h2 className="text-2xl font-bold text-slate-800 dark:text-white mb-6">1. Selecciona una asignatura</h2>
+            {subjects.length === 0 ? (
+              <p className="text-slate-500 dark:text-slate-400">No tienes asignaturas asignadas.</p>
             ) : (
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 {subjects.map((sub: any) => (
                   <button
-                    key={sub.idSub || sub.nameSub}
-                    onClick={() => { setSelectedSubject(sub.nameSub); setStep(2); }}
+                    key={sub.idSub}
+                    onClick={() => { setSelectedSubject(sub); setStep(2); }}
                     className={`p-6 rounded-2xl border-2 transition-all flex flex-col items-center gap-3 ${
-                      selectedSubject === sub.nameSub ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/30' : 'border-transparent bg-white/60 dark:bg-slate-700/50 hover:bg-white dark:hover:bg-slate-700 hover:shadow-md'
+                      selectedSubject?.idSub === sub.idSub ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/30' : 'border-transparent bg-white/60 dark:bg-slate-700/50 hover:bg-white dark:hover:bg-slate-700 hover:shadow-md'
                     }`}
                   >
                     <div className="w-12 h-12 bg-blue-100 text-blue-600 dark:bg-blue-900/50 dark:text-blue-400 rounded-xl flex items-center justify-center">
@@ -113,16 +134,19 @@ export default function ReservePage() {
         {/* PASO 2: Aula */}
         {step === 2 && (
           <div className="animate-in fade-in slide-in-from-right-4">
-            <h2 className="text-2xl font-bold text-slate-800 dark:text-white mb-6">Selecciona un Aula</h2>
+            <h2 className="text-2xl font-bold text-slate-800 dark:text-white mb-6">2. Selecciona un Aula</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {[1, 2, 3].map((id) => (
+              {classRooms.map((room: any) => (
                 <button
-                  key={id}
-                  onClick={() => { setSelectedClassRoom(id.toString()); setStep(3); }}
-                  className="p-6 rounded-2xl border-2 border-transparent bg-white/60 dark:bg-slate-700/50 hover:bg-white dark:hover:bg-slate-700 hover:shadow-md transition-all flex flex-col items-start gap-2"
+                  key={room.idClassR}
+                  onClick={() => { setSelectedClassRoom(room); setStep(3); }}
+                  className={`p-6 rounded-2xl border-2 transition-all flex flex-col items-start gap-2 ${
+                    selectedClassRoom?.idClassR === room.idClassR ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/30' : 'border-transparent bg-white/60 dark:bg-slate-700/50 hover:bg-white dark:hover:bg-slate-700 hover:shadow-md'
+                  }`}
                 >
-                  <span className="font-bold text-slate-800 dark:text-white text-lg">Aula {id}</span>
-                  <span className="text-xs font-semibold text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-900/50 px-2 py-1 rounded-md">Disponible</span>
+                  <School size={24} className="text-purple-500 mb-2" />
+                  <span className="font-bold text-slate-800 dark:text-white text-lg">{room.location}</span>
+                  <span className="text-xs font-semibold text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-900/50 px-2 py-1 rounded-md">Capacidad: {room.capacity}</span>
                 </button>
               ))}
             </div>
@@ -132,16 +156,25 @@ export default function ReservePage() {
         {/* PASO 3: Medios */}
         {step === 3 && (
           <div className="animate-in fade-in slide-in-from-right-4">
-            <h2 className="text-2xl font-bold text-slate-800 dark:text-white mb-6">Selecciona los Medios</h2>
-            <div className="space-y-4">
-              <div className="flex items-center gap-4 p-4 bg-white/60 dark:bg-slate-700/50 rounded-xl">
-                <input type="checkbox" className="w-5 h-5 text-purple-600 rounded" />
-                <label className="font-semibold text-slate-700 dark:text-slate-300">Proyector (2 disponibles)</label>
-              </div>
-              <div className="flex items-center gap-4 p-4 bg-white/60 dark:bg-slate-700/50 rounded-xl">
-                <input type="checkbox" className="w-5 h-5 text-purple-600 rounded" />
-                <label className="font-semibold text-slate-700 dark:text-slate-300">Pizarra Digital (3 disponibles)</label>
-              </div>
+            <h2 className="text-2xl font-bold text-slate-800 dark:text-white mb-6">3. Selecciona los Medios</h2>
+            <div className="space-y-3">
+              {means.length === 0 ? (
+                <p className="text-slate-500 dark:text-slate-400">No hay medios disponibles en este momento.</p>
+              ) : means.map((mean: any) => (
+                <div key={mean.idMean} className="flex items-center gap-4 p-4 bg-white/60 dark:bg-slate-700/50 rounded-xl border border-transparent hover:border-purple-200 transition-colors">
+                  <input 
+                    type="checkbox" 
+                    checked={selectedMeans.includes(mean.idMean)}
+                    onChange={() => handleToggleMean(mean.idMean)}
+                    className="w-5 h-5 text-purple-600 rounded cursor-pointer" 
+                  />
+                  <Monitor size={20} className="text-slate-400" />
+                  <div>
+                    <p className="font-semibold text-slate-700 dark:text-slate-300">{mean.nameMean}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">{mean.state} • {mean.type || 'Tecnológico'}</p>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         )}
@@ -161,9 +194,9 @@ export default function ReservePage() {
               <div className="text-center w-full max-w-md">
                 <h2 className="text-2xl font-bold text-slate-800 dark:text-white mb-6">Resumen de la Reserva</h2>
                 <div className="bg-white/60 dark:bg-slate-700/50 p-6 rounded-2xl space-y-4 mb-8 text-left">
-                  <p className="flex justify-between border-b border-slate-200 dark:border-slate-600 pb-2"><span className="text-slate-500 dark:text-slate-400">Asignatura:</span> <span className="font-bold text-slate-800 dark:text-white">{selectedSubject}</span></p>
-                  <p className="flex justify-between border-b border-slate-200 dark:border-slate-600 pb-2"><span className="text-slate-500 dark:text-slate-400">Aula:</span> <span className="font-bold text-slate-800 dark:text-white">Aula {selectedClassRoom}</span></p>
-                  <p className="flex justify-between"><span className="text-slate-500 dark:text-slate-400">Medios:</span> <span className="font-bold text-slate-800 dark:text-white">Proyector</span></p>
+                  <p className="flex justify-between border-b border-slate-200 dark:border-slate-600 pb-2"><span className="text-slate-500 dark:text-slate-400">Asignatura:</span> <span className="font-bold text-slate-800 dark:text-white">{selectedSubject?.nameSub}</span></p>
+                  <p className="flex justify-between border-b border-slate-200 dark:border-slate-600 pb-2"><span className="text-slate-500 dark:text-slate-400">Aula:</span> <span className="font-bold text-slate-800 dark:text-white">{selectedClassRoom?.location}</span></p>
+                  <p className="flex justify-between"><span className="text-slate-500 dark:text-slate-400">Medios:</span> <span className="font-bold text-slate-800 dark:text-white">{selectedMeans.length} seleccionados</span></p>
                 </div>
                 <button onClick={handleReserve} className="btn-lyra w-full py-4 text-lg">
                   Confirmar Reserva
@@ -185,8 +218,8 @@ export default function ReservePage() {
             </button>
             <button 
               onClick={() => setStep(step + 1)} 
-              disabled={step === 1 && !selectedSubject}
-              className={`btn-lyra px-6 py-2 flex items-center gap-2 ${step === 1 && !selectedSubject ? 'opacity-50 cursor-not-allowed' : ''}`}
+              disabled={(step === 1 && !selectedSubject) || (step === 2 && !selectedClassRoom)}
+              className={`btn-lyra px-6 py-2 flex items-center gap-2 ${((step === 1 && !selectedSubject) || (step === 2 && !selectedClassRoom)) ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               Siguiente <ArrowRight size={18} />
             </button>

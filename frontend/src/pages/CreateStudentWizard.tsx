@@ -3,26 +3,27 @@ import { useNavigate } from 'react-router-dom';
 import { StudentService } from '../services/student.service';
 import { CourseService } from '../services/course.service';
 import { useAuthStore } from '../store/authStore';
+import { validateName, validateEmail, validatePhone, validateDocNumber } from '../utils/validators';
+import { LEVEL_OPTIONS, GENDER_OPTIONS, INITIAL_STATUS_OPTIONS } from '../utils/constants';
 import { User, Mail, Phone, BookOpen, Check, ChevronLeft, GraduationCap, Info, UserCircle2 } from 'lucide-react';
 
 export default function CreateStudentWizard() {
   const navigate = useNavigate();
-  const { institutionId } = useAuthStore(); // Obtenemos el ID real
+  const { institutionId } = useAuthStore();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
   const totalSteps = 4;
 
-  // Estado para los cursos reales
   const [courses, setCourses] = useState<any[]>([]);
 
   const [formData, setFormData] = useState({
     name1: '', lastName1: '', lastName2: '', birthDate: '', gender: '', docType: 'DNI', docNumber: '',
     email: '', phone: '', address: '',
     level: 'Primaria', grade: '1ro', section: 'A', admissionDate: new Date().toISOString().split('T')[0], academicYear: '2024-2025', initialStatus: 'Nuevo',
-    notes: '', tutorName: '', tutorPhone: '', emergencyContact: '', isActive: true, idC: '' // idC ahora empieza vacío
+    notes: '', tutorName: '', tutorPhone: '', emergencyContact: '', isActive: true, idC: ''
   });
 
-  // Cargar cursos al montar el componente
   useEffect(() => {
     CourseService.getAll().then(setCourses);
   }, []);
@@ -34,24 +35,49 @@ export default function CreateStudentWizard() {
   };
 
   const nextStep = () => {
+    setErrorMsg('');
+    
     if (step === 1) {
-      if (!formData.name1 || !formData.lastName1 || !formData.birthDate || !formData.gender || !formData.docNumber) {
-        alert("Por favor, completa todos los campos obligatorios de Datos Personales.");
+      if (!formData.name1 || !validateName(formData.name1)) {
+        setErrorMsg("El nombre debe empezar con mayúscula y solo contener letras.");
+        return;
+      }
+      if (!formData.lastName1 || !validateName(formData.lastName1)) {
+        setErrorMsg("El apellido debe empezar con mayúscula y solo contener letras.");
+        return;
+      }
+      if (!formData.birthDate || !formData.gender) {
+        setErrorMsg("Completa todos los campos obligatorios.");
+        return;
+      }
+      if (!validateDocNumber(formData.docNumber, formData.docType)) {
+        setErrorMsg(formData.docType === 'DNI' ? "El DNI debe tener 8 números." : "El pasaporte debe ser alfanumérico (6-15 caracteres).");
         return;
       }
     }
+    
     if (step === 2) {
-      if (!formData.email || !formData.phone || !formData.address) {
-        alert("Por favor, completa todos los campos obligatorios de Contacto.");
+      if (!validateEmail(formData.email)) {
+        setErrorMsg("El correo no es válido. Debe tener @ y un dominio (ej. .com, .cu).");
+        return;
+      }
+      if (!validatePhone(formData.phone)) {
+        setErrorMsg("El teléfono solo debe contener números, guiones y espacios.");
+        return;
+      }
+      if (!formData.address) {
+        setErrorMsg("La dirección es obligatoria.");
         return;
       }
     }
+    
     if (step === 3) {
       if (!formData.grade || !formData.section || !formData.academicYear || !formData.idC) {
-        alert("Por favor, completa todos los campos obligatorios de Info. Académica (incluyendo el curso).");
+        setErrorMsg("Completa todos los campos académicos (incluyendo el curso).");
         return;
       }
     }
+    
     setStep(prev => Math.min(prev + 1, totalSteps));
   };
 
@@ -59,15 +85,15 @@ export default function CreateStudentWizard() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+    setErrorMsg('');
+
     if (!formData.tutorName || !formData.tutorPhone || !formData.emergencyContact) {
-      alert("Por favor, completa los campos obligatorios de Información Adicional.");
+      setErrorMsg("Completa la información adicional.");
       return;
     }
 
     setLoading(true);
     try {
-      // Payload con institutionId real y idC numérico
       const payload = {
         name1: formData.name1,
         lastName1: formData.lastName1,
@@ -91,7 +117,7 @@ export default function CreateStudentWizard() {
         emergencyContact: formData.emergencyContact,
         isActive: formData.isActive,
         idC: Number(formData.idC),
-        idInstitution: institutionId || 1 // Usamos el del authStore
+        idInstitution: institutionId || 1
       };
       
       await StudentService.create(payload);
@@ -99,7 +125,7 @@ export default function CreateStudentWizard() {
       navigate('/students');
     } catch (error: any) {
       console.error(error.response?.data || error);
-      alert(error.response?.data?.detail || "Error al guardar el estudiante. Revisa la consola.");
+      setErrorMsg(error.response?.data?.detail || "Error al guardar el estudiante. Revisa la consola.");
     } finally {
       setLoading(false);
     }
@@ -145,8 +171,13 @@ export default function CreateStudentWizard() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 glass-card p-8 dark:bg-slate-800/50 dark:border-slate-700">
+          {errorMsg && (
+            <div className="bg-red-100 text-red-600 p-4 rounded-xl mb-6 text-sm font-bold animate-in fade-in">
+              {errorMsg}
+            </div>
+          )}
+          
           <form onSubmit={handleSubmit}>
-            
             {/* PASO 1 */}
             {step === 1 && (
               <div className="space-y-6 animate-in fade-in slide-in-from-right-4">
@@ -161,9 +192,7 @@ export default function CreateStudentWizard() {
                   <div><label className="block text-sm font-bold mb-1 dark:text-slate-300">Género *</label>
                     <select name="gender" required value={formData.gender} onChange={handleChange} className="w-full px-4 py-3 rounded-xl border dark:border-slate-600 bg-white/50 dark:bg-slate-700/50 dark:text-white">
                       <option value="">Seleccionar</option>
-                      <option value="Femenino">Femenino</option>
-                      <option value="Masculino">Masculino</option>
-                      <option value="No binario">No binario</option>
+                      {GENDER_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
                     </select>
                   </div>
                   <div><label className="block text-sm font-bold mb-1 dark:text-slate-300">Tipo Doc *</label><select name="docType" required value={formData.docType} onChange={handleChange} className="w-full px-4 py-3 rounded-xl border dark:border-slate-600 bg-white/50 dark:bg-slate-700/50 dark:text-white"><option value="DNI">DNI</option><option value="Pasaporte">Pasaporte</option></select></div>
@@ -195,13 +224,11 @@ export default function CreateStudentWizard() {
                   <div><h2 className="text-xl font-bold text-slate-800 dark:text-white">Info Académica</h2></div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div><label className="block text-sm font-bold mb-1 dark:text-slate-300">Nivel *</label><select name="level" required value={formData.level} onChange={handleChange} className="w-full px-4 py-3 rounded-xl border dark:border-slate-600 bg-white/50 dark:bg-slate-700/50 dark:text-white"><option value="Primaria">Primaria</option><option value="Secundaria">Secundaria</option></select></div>
+                  <div><label className="block text-sm font-bold mb-1 dark:text-slate-300">Nivel *</label><select name="level" required value={formData.level} onChange={handleChange} className="w-full px-4 py-3 rounded-xl border dark:border-slate-600 bg-white/50 dark:bg-slate-700/50 dark:text-white">{LEVEL_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}</select></div>
                   <div><label className="block text-sm font-bold mb-1 dark:text-slate-300">Grado *</label><input type="text" name="grade" required value={formData.grade} onChange={handleChange} className="w-full px-4 py-3 rounded-xl border dark:border-slate-600 bg-white/50 dark:bg-slate-700/50 dark:text-white" placeholder="Ej. 3ro" /></div>
                   <div><label className="block text-sm font-bold mb-1 dark:text-slate-300">Sección *</label><input type="text" name="section" required value={formData.section} onChange={handleChange} className="w-full px-4 py-3 rounded-xl border dark:border-slate-600 bg-white/50 dark:bg-slate-700/50 dark:text-white" placeholder="Ej. A" /></div>
                   <div><label className="block text-sm font-bold mb-1 dark:text-slate-300">Año Académico *</label><input type="text" name="academicYear" required value={formData.academicYear} onChange={handleChange} className="w-full px-4 py-3 rounded-xl border dark:border-slate-600 bg-white/50 dark:bg-slate-700/50 dark:text-white" placeholder="Ej. 2024-2025" /></div>
                   <div><label className="block text-sm font-bold mb-1 dark:text-slate-300">Fecha de Ingreso *</label><input type="date" name="admissionDate" required value={formData.admissionDate} onChange={handleChange} className="w-full px-4 py-3 rounded-xl border dark:border-slate-600 bg-white/50 dark:bg-slate-700/50 dark:text-white" /></div>
-                  
-                  {/* SELECT DE CURSOS REALES */}
                   <div>
                     <label className="block text-sm font-bold mb-1 dark:text-slate-300">Curso *</label>
                     <select name="idC" required value={formData.idC} onChange={handleChange} className="w-full px-4 py-3 rounded-xl border dark:border-slate-600 bg-white/50 dark:bg-slate-700/50 dark:text-white">

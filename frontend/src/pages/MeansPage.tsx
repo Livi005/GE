@@ -3,8 +3,11 @@ import { MeansService, Means } from '../services/means.service';
 import { Plus, Edit2, Trash2, X, Monitor, BookOpen, Search } from 'lucide-react';
 import Pagination from '../components/Pagination';
 import LoadingState from '../components/LoadingState';
+import { MEAN_TYPES } from '../utils/constants';
+import { useAuthStore } from '../store/authStore';
 
 export default function MeansPage() {
+  const { institutionId } = useAuthStore();
   const [activeTab, setActiveTab] = useState<'tech' | 'aux'>('tech');
   const [means, setMeans] = useState<Means[]>([]);
   const [loading, setLoading] = useState(true);
@@ -19,6 +22,7 @@ export default function MeansPage() {
   const [isAviable, setIsAviable] = useState(true);
   const [isActive, setIsActive] = useState(true);
   const [type, setType] = useState('');
+  const [isCustomType, setIsCustomType] = useState(false);
 
   useEffect(() => {
     loadMeans();
@@ -39,7 +43,10 @@ export default function MeansPage() {
       setState(mean.state);
       setIsAviable(mean.isAviable);
       setIsActive((mean as any).isActive !== undefined ? (mean as any).isActive : true);
-      setType(mean.type || '');
+      
+      const meanType = mean.type || '';
+      setType(meanType);
+      setIsCustomType(meanType !== '' && !MEAN_TYPES.includes(meanType));
     } else {
       setEditingId(null);
       setNameMean('');
@@ -47,6 +54,7 @@ export default function MeansPage() {
       setIsAviable(true);
       setIsActive(true);
       setType('');
+      setIsCustomType(false);
     }
     setIsModalOpen(true);
   };
@@ -54,13 +62,12 @@ export default function MeansPage() {
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // AÑADIDO idInstitution: 1
     const payload: any = { 
       nameMean, 
       state, 
       isAviable, 
       isActive,
-      idInstitution: 1
+      idInstitution: institutionId || 1
     };
     
     if (activeTab === 'aux') {
@@ -78,8 +85,7 @@ export default function MeansPage() {
       setIsModalOpen(false);
       loadMeans();
     } catch (error: any) { 
-      console.error(error.response?.data);
-      alert(error.response?.data?.detail || "Error al guardar el medio. Revisa la consola."); 
+      alert(error.response?.data?.detail || "Error al guardar el medio."); 
     }
   };
 
@@ -88,7 +94,7 @@ export default function MeansPage() {
       try {
         if (activeTab === 'tech') await MeansService.deleteTechnological(id);
         else await MeansService.deleteAuxiliary(id);
-        loadMeans(); // Recargar la lista
+        loadMeans();
       } catch (error: any) {
         alert("Error al eliminar: " + (error.response?.data?.detail || "Revisa la consola"));
       }
@@ -170,7 +176,37 @@ export default function MeansPage() {
             <h2 className="text-2xl font-display font-bold mb-6 dark:text-white">{editingId ? 'Editar' : 'Nuevo'} {activeTab === 'tech' ? 'Tecnológico' : 'Auxiliar'}</h2>
             <form onSubmit={handleSave} className="space-y-4">
               <div><label className="block text-sm font-bold mb-1 dark:text-slate-300">Nombre</label><input type="text" required value={nameMean} onChange={(e) => setNameMean(e.target.value)} className="w-full px-4 py-2 rounded-xl border dark:bg-slate-700/50 dark:text-white dark:border-slate-600" /></div>
-              {activeTab === 'aux' && <div><label className="block text-sm font-bold mb-1 dark:text-slate-300">Tipo</label><input type="text" required value={type} onChange={(e) => setType(e.target.value)} className="w-full px-4 py-2 rounded-xl border dark:bg-slate-700/50 dark:text-white dark:border-slate-600" /></div>}
+              
+              {/* SELECTOR CON OPCIÓN DE ESCRIBIR PARA AUXILIARES */}
+              {activeTab === 'aux' && (
+                <div>
+                  <label className="block text-sm font-bold mb-1 dark:text-slate-300">Tipo de Medio</label>
+                  {!isCustomType ? (
+                    <select 
+                      required 
+                      value={type} 
+                      onChange={(e) => {
+                        if (e.target.value === 'Otro') {
+                          setIsCustomType(true);
+                          setType('');
+                        } else {
+                          setType(e.target.value);
+                        }
+                      }} 
+                      className="w-full px-4 py-2 rounded-xl border dark:bg-slate-700/50 dark:text-white dark:border-slate-600"
+                    >
+                      <option value="">Seleccionar...</option>
+                      {MEAN_TYPES.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                    </select>
+                  ) : (
+                    <div className="flex gap-2">
+                      <input type="text" required value={type} onChange={(e) => setType(e.target.value)} className="w-full px-4 py-2 rounded-xl border dark:bg-slate-700/50 dark:text-white dark:border-slate-600" placeholder="Escribe el tipo..." />
+                      <button type="button" onClick={() => { setIsCustomType(false); setType(''); }} className="px-3 bg-red-100 text-red-600 rounded-xl font-bold">X</button>
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div><label className="block text-sm font-bold mb-1 dark:text-slate-300">Estado Físico</label><select value={state} onChange={(e) => setState(e.target.value)} className="w-full px-4 py-2 rounded-xl border dark:bg-slate-700/50 dark:text-white dark:border-slate-600"><option value="Bueno">Bueno</option><option value="Regular">Regular</option><option value="Malo">Malo</option></select></div>
               <div className="flex items-center gap-3 pt-2"><input type="checkbox" checked={isAviable} onChange={(e) => setIsAviable(e.target.checked)} className="w-5 h-5 text-purple-600 rounded" /><label className="text-sm font-medium dark:text-slate-300">¿Está disponible?</label></div>
               <div className="flex items-center gap-3 pt-2"><input type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} className="w-5 h-5 text-purple-600 rounded" /><label className="text-sm font-medium dark:text-slate-300">¿Está activo en el sistema?</label></div>

@@ -107,7 +107,7 @@ public class DashboardService : IDashboardService
     }
 
         // ---------- Dashboard Director ----------
-    public async Task<Result<AdminDashboardDto>> GetAdminDashboardAsync(
+        public async Task<Result<AdminDashboardDto>> GetAdminDashboardAsync(
         CancellationToken cancellationToken = default)
     {
         var totalStudents = await _unitOfWork.Repository<Student>().Query()
@@ -118,8 +118,10 @@ public class DashboardService : IDashboardService
             .CountAsync(s => !s.IsDeleted, cancellationToken);
         var totalRooms = await _unitOfWork.Repository<ClassRoom>().Query()
             .CountAsync(c => !c.IsDeleted, cancellationToken);
+        var totalCourses = await _unitOfWork.Repository<Course>().Query()
+            .CountAsync(c => !c.IsDeleted, cancellationToken);
 
-        // Asistencia semanal: contar Present vs total por día (últimos 7 días)
+        // Asistencia semanal
         var today = DateTime.UtcNow.Date;
         var start = today.AddDays(-6);
         var attendances = await _unitOfWork.Repository<Attendance>().Query()
@@ -140,7 +142,7 @@ public class DashboardService : IDashboardService
             weekly.Add(new WeeklyAttendanceDto { Day = dayOfWeek, Value = value });
         }
 
-        // Notificaciones recientes (máx 5)
+        // Notificaciones recientes
         var notifications = await _unitOfWork.Repository<Notification>().Query()
             .OrderByDescending(n => n.CreatedAt)
             .Take(5)
@@ -155,7 +157,16 @@ public class DashboardService : IDashboardService
             })
             .ToListAsync(cancellationToken);
 
-        // Alumnos en riesgo: contar por promedio de notas
+        var totalNotifications = await _unitOfWork.Repository<Notification>().Query()
+            .CountAsync(cancellationToken);
+
+        // Promedio general
+        var grades = await _unitOfWork.Repository<ProfessorStudentSubject>().Query()
+            .Select(p => p.StudentGrades)
+            .ToListAsync(cancellationToken);
+        var averageGrade = grades.Count == 0 ? 0 : Math.Round(grades.Average(), 2);
+
+        // Alumnos en riesgo
         var pss = await _unitOfWork.Repository<ProfessorStudentSubject>().Query()
             .Select(p => new { p.StudentSubject.IdStud, p.StudentGrades })
             .ToListAsync(cancellationToken);
@@ -172,12 +183,36 @@ public class DashboardService : IDashboardService
         var low = grouped.Count(x => x.Avg >= 6 && x.Avg < 7);
         var totalRisk = high + medium;
 
+        // Top 5 estudiantes
+        var topStudents = grouped
+            .OrderByDescending(x => x.Avg)
+            .Take(5)
+            .ToList();
+
+        var topStudentDtos = new List<TopStudentDto>();
+        foreach (var top in topStudents)
+        {
+            var student = await _unitOfWork.Repository<Student>().Query()
+                .FirstOrDefaultAsync(s => s.IdStud == top.IdStud, cancellationToken);
+            if (student is null) continue;
+            topStudentDtos.Add(new TopStudentDto
+            {
+                IdStud = student.IdStud,
+                FullName = $"{student.Name1} {student.LastName1}".Trim(),
+                Average = Math.Round(top.Avg, 2)
+            });
+        }
+
         return Result.Success(new AdminDashboardDto
         {
             TotalStudents = totalStudents,
             TotalProfessors = totalProfessors,
             TotalSubjects = totalSubjects,
             TotalRooms = totalRooms,
+            TotalCourses = totalCourses,
+            TotalSubjectsWithGrades = pss.Select(x => x.IdStud).Distinct().Count(),
+            AverageGrade = averageGrade,
+            TotalNotifications = totalNotifications,
             WeeklyAttendance = weekly,
             Notifications = notifications,
             Events = new List<EventBriefDto>(),
@@ -187,17 +222,23 @@ public class DashboardService : IDashboardService
                 Medium = medium,
                 Low = low,
                 Total = totalRisk
-            }
+            },
+            TopStudents = topStudentDtos
         });
     }
 
     // ---------- Dashboard Secretaría ----------
-    public async Task<Result<SecretaryDashboardDto>> GetSecretaryDashboardAsync(
+        public async Task<Result<SecretaryDashboardDto>> GetSecretaryDashboardAsync(
         CancellationToken cancellationToken = default)
     {
         var oneMonthAgo = DateTime.UtcNow.AddMonths(-1).Date;
-        var newStudents = await _unitOfWork.Repository<Student>().Query()
-            .CountAsync(s => s.AdmissionDate >= oneMonthAgo && !s.IsDeleted, cancellationToken);
+
+        var allStudents = await _unitOfWork.Repository<Student>().Query()
+            .ToListAsync(cancellationToken);
+
+        var newStudents = allStudents.Count(s => s.AdmissionDate >= oneMonthAgo && !s.IsDeleted);
+        var totalActive = allStudents.Count(s => s.IsActive && !s.IsDeleted);
+        var totalInactive = allStudents.Count(s => !s.IsActive && !s.IsDeleted);
 
         var notifications = await _unitOfWork.Repository<Notification>().Query()
             .OrderByDescending(n => n.CreatedAt)
@@ -216,15 +257,17 @@ public class DashboardService : IDashboardService
         return Result.Success(new SecretaryDashboardDto
         {
             NewEnrollments = newStudents,
-            PendingTrámites = 0,   // se poblará cuando exista módulo de trámites
+            PendingTrámites = 0,
             NewStudents = newStudents,
+            TotalActiveStudents = totalActive,
+            TotalInactiveStudents = totalInactive,
             Notifications = notifications,
             UpcomingDeadlines = new List<EventBriefDto>()
         });
     }
 
         // ---------- Dashboard Maintenance ----------
-    public async Task<Result<MaintenanceDashboardDto>> GetMaintenanceDashboardAsync(
+        public async Task<Result<MaintenanceDashboardDto>> GetMaintenanceDashboardAsync(
         CancellationToken cancellationToken = default)
     {
         var totalClassRooms = await _unitOfWork.Repository<ClassRoom>().Query()
@@ -242,6 +285,11 @@ public class DashboardService : IDashboardService
         var totalMaintenances = await _unitOfWork.Repository<Maintenance>().Query()
             .CountAsync(cancellationToken);
 
+        var allMaintenances = await _unitOfWork.Repository<Maintenance>().Query()
+            .ToListAsync(cancellationToken);
+
+        var avgCost = allMaintenances.Count == 0 ? 0 : allMaintenances.Average(m => m.Cost);
+
         var recent = maintenances.Select(m => new MaintenanceBriefDto
         {
             Id = m.IdM,
@@ -251,6 +299,22 @@ public class DashboardService : IDashboardService
             Cost = m.Cost
         }).ToList();
 
+        // Medios por estado
+        var techStates = await _unitOfWork.Repository<TechnologicalMeans>().Query()
+            .GroupBy(t => t.State)
+            .Select(g => new MeanStatusDto { Status = g.Key, Count = g.Count() })
+            .ToListAsync(cancellationToken);
+
+        var auxStates = await _unitOfWork.Repository<AuxiliaryMeans>().Query()
+            .GroupBy(a => a.State)
+            .Select(g => new MeanStatusDto { Status = g.Key, Count = g.Count() })
+            .ToListAsync(cancellationToken);
+
+        var allStates = techStates.Concat(auxStates)
+            .GroupBy(s => s.Status)
+            .Select(g => new MeanStatusDto { Status = g.Key, Count = g.Sum(x => x.Count) })
+            .ToList();
+
         return Result.Success(new MaintenanceDashboardDto
         {
             TotalClassRooms = totalClassRooms,
@@ -258,7 +322,12 @@ public class DashboardService : IDashboardService
             TotalAuxMeans = totalAuxMeans,
             TotalMaintenances = totalMaintenances,
             PendingMaintenances = 0,
-            RecentMaintenances = recent
+            TotalMeansWithMaintenance = maintenances
+                .Select(m => m.IdAuxMean ?? m.IdTechMean)
+                .Distinct().Count(),
+            AverageMaintenanceCost = Math.Round(avgCost, 2),
+            RecentMaintenances = recent,
+            MeansByStatus = allStates
         });
     }
 

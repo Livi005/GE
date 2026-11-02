@@ -69,88 +69,62 @@ public class ContextInitializer
     private async Task TrySeedAsync()
     {
         await SeedRolesAsync();
-
         var institution = await SeedInstitutionAsync();
 
-        // Usuarios por rol (password fija: Admin123!)
-        var superAdmin       = await SeedUserWithRoleAsync("superadmin",          Roles.SuperAdmin,   null);
-        var director         = await SeedUserWithRoleAsync("director.juan.gomez", Roles.Director,     institution);
-        var maintenance      = await SeedUserWithRoleAsync("mantenimiento.pedro.lopez", Roles.Maintenance, institution);
-        var secretary        = await SeedUserWithRoleAsync("secretaria.ana.ruiz", Roles.Secretary,    institution);
-        var profDean         = await SeedUserWithRoleAsync("prof.juan.gomez",     Roles.Professor,    institution);
-        var prof2            = await SeedUserWithRoleAsync("prof.maria.lopez",    Roles.Professor,    institution);
-        var prof3            = await SeedUserWithRoleAsync("prof.carlos.diaz",    Roles.Professor,    institution);
-        var yearHead         = await SeedUserWithRoleAsync("jefe.maria.soto",     Roles.YearHead,     institution);
-        var stud1            = await SeedUserWithRoleAsync("alumno.pedro.torres", Roles.Student,      institution);
-        var stud2            = await SeedUserWithRoleAsync("alumno.ana.ruiz",     Roles.Student,      institution);
-        var stud3            = await SeedUserWithRoleAsync("alumno.luis.soto",    Roles.Student,      institution);
+        // ---------- Usuarios base ----------
+        var superAdmin = await SeedUserAsync("superadmin", Roles.SuperAdmin, DemoPassword);
+        var director = await SeedUserAsync("director.juan.gomez", Roles.Director, DemoPassword);
+        var maintenance = await SeedUserAsync("mantenimiento.pedro.lopez", Roles.Maintenance, DemoPassword);
+        var secretary = await SeedUserAsync("secretaria.ana.ruiz", Roles.Secretary, DemoPassword);
+        var yearHeadUser = await SeedUserAsync("jefe.maria.soto", Roles.YearHead, DemoPassword);
 
-        // Perfiles
-        var directorProfile  = await SeedDirectorProfileAsync(director, institution, "Juan Gomez");
-        var maintProfile     = await SeedMaintenanceProfileAsync(maintenance, institution, "Pedro Lopez");
-        var secProfile       = await SeedSecretaryProfileAsync(secretary, institution, "Ana Ruiz");
-        var profDeanProfile  = await SeedProfessorProfileAsync(profDean, institution, "Juan Gomez", spec: "Matemáticas", isDean: true);
-        var prof2Profile     = await SeedProfessorProfileAsync(prof2, institution, "Maria Lopez", spec: "Física", isDean: false);
-        var prof3Profile     = await SeedProfessorProfileAsync(prof3, institution, "Carlos Diaz", spec: "Química", isDean: false);
-        var yearHeadProfile  = await SeedYearHeadProfileAsync(yearHead, institution, "Maria Soto");
+        // ---------- Perfiles de staff ----------
+        await SeedDirectorAsync(director, institution, "Juan Gomez");
+        await SeedMaintenanceAsync(maintenance, institution, "Pedro Lopez");
+        await SeedSecretaryAsync(secretary, institution, "Ana Ruiz");
+        await SeedYearHeadAsync(yearHeadUser, institution, "Maria Soto");
 
-        var course           = await SeedCourseAsync(institution);
-        var classRoom        = await SeedClassRoomAsync(institution);
-        var subject          = await SeedSubjectAsync(institution, classRoom, "Matemáticas", "1ro", "A");
-        var subject2         = await SeedSubjectAsync(institution, classRoom, "Física", "1ro", "A");
+        // ---------- Cursos (3) ----------
+        var courses = await SeedCoursesAsync(institution);
 
-        var stud1Profile     = await SeedStudentProfileAsync(stud1, institution, course, "Pedro", "Torres");
-        var stud2Profile     = await SeedStudentProfileAsync(stud2, institution, course, "Ana", "Ruiz");
-        var stud3Profile     = await SeedStudentProfileAsync(stud3, institution, course, "Luis", "Soto");
+        // ---------- Aulas (5) ----------
+        var classRooms = await SeedClassRoomsAsync(institution);
 
-        // Relaciones profesor-asignatura
-        await LinkProfessorSubjectAsync(profDeanProfile, subject);
-        await LinkProfessorSubjectAsync(prof2Profile, subject2);
-        await LinkProfessorSubjectAsync(prof3Profile, subject2);
+        // ---------- Asignaturas (6) ----------
+        var subjects = await SeedSubjectsAsync(institution, classRooms);
 
-        // Relaciones estudiante-asignatura
-        await LinkStudentSubjectAsync(stud1Profile, subject);
-        await LinkStudentSubjectAsync(stud2Profile, subject);
-        await LinkStudentSubjectAsync(stud3Profile, subject);
-        await LinkStudentSubjectAsync(stud1Profile, subject2);
-        await LinkStudentSubjectAsync(stud2Profile, subject2);
-        await LinkStudentSubjectAsync(stud3Profile, subject2);
+        // ---------- Profesores (5) ----------
+        var professors = await SeedProfessorsAsync(institution, subjects);
 
-        // Notas
-        await SeedGradesAsync(profDeanProfile, subject, stud1Profile, stud2Profile, stud3Profile);
-        await SeedGradesAsync(prof2Profile, subject2, stud1Profile, stud2Profile, stud3Profile);
+        // ---------- Estudiantes (15) ----------
+        var students = await SeedStudentsAsync(institution, courses);
 
-        // Asistencias (5 días, todos presentes salvo un ausente)
-        await SeedAttendanceAsync(subject, stud1Profile, stud2Profile, stud3Profile);
-        await SeedAttendanceAsync(subject2, stud1Profile, stud2Profile, stud3Profile);
+        // ---------- Medios ----------
+        var techMeans = await SeedTechMeansAsync(institution);
+        var auxMeans = await SeedAuxMeansAsync(institution);
 
-        // Horario
-        await SeedScheduleAsync(subject, profDeanProfile, classRoom);
-        await SeedScheduleAsync(subject2, prof2Profile, classRoom);
-
-        // Medios
-        var techMean = await SeedTechMeanAsync(institution);
-        var auxMean  = await SeedAuxMeanAsync(institution);
-        await LinkClassRoomTechMeanAsync(classRoom, techMean);
-        await LinkSubjectAuxMeanAsync(subject, auxMean);
-
-        // Evaluaciones de profesores por parte de estudiantes
-        await SeedProfessorEvaluationsAsync(profDeanProfile, stud1Profile, stud2Profile, stud3Profile);
-        await SeedProfessorEvaluationsAsync(prof2Profile, stud1Profile, stud2Profile);
-
-        // Notificaciones
-        await SeedNotificationsAsync(director, secretary, profDean, stud1);
-
-        // Auditoría
-        await SeedAuditLogAsync(director, superAdmin);
+        // ---------- Relaciones ----------
+        await SeedClassRoomTechMeansAsync(classRooms, techMeans);
+        await SeedSubjectAuxMeansAsync(subjects, auxMeans);
+        await SeedProfessorSubjectsAsync(professors, subjects);
+        await SeedStudentSubjectsAsync(students, subjects);
+        await SeedProfessorStudentSubjectsAsync(professors, students, subjects);
+        await SeedSchedulesAsync(subjects, professors, classRooms);
+        await SeedAttendancesAsync(subjects, students);
+        await SeedProfessorEvaluationsAsync(professors, students);
+        await SeedNotificationsAsync(director, secretary, professors, students);
+        await SeedAuditLogsAsync(director, superAdmin, secretary);
 
         await _context.SaveChangesAsync();
 
-        _logger.LogInformation("✅ Seed completo. Usuarios de prueba con password: {Password}", DemoPassword);
+        _logger.LogInformation(
+            "✅ Seed completo. Usuarios de prueba con password: {Password}. " +
+            "Cursos: {Courses}, Aulas: {Rooms}, Asignaturas: {Subjects}, Profesores: {Profs}, Estudiantes: {Studs}",
+            DemoPassword, courses.Count, classRooms.Count, subjects.Count, professors.Count, students.Count);
     }
 
     // -------------------------------------------------------------
-    // Roles
+    // Roles e institución
     // -------------------------------------------------------------
     private async Task SeedRolesAsync()
     {
@@ -161,9 +135,6 @@ public class ContextInitializer
         }
     }
 
-    // -------------------------------------------------------------
-    // Institución
-    // -------------------------------------------------------------
     private async Task<Institution> SeedInstitutionAsync()
     {
         var existing = await _context.Institutions.FirstOrDefaultAsync(i => i.Domain == "lyra.local");
@@ -184,15 +155,15 @@ public class ContextInitializer
     }
 
     // -------------------------------------------------------------
-    // Usuarios + Roles
+    // Usuarios
     // -------------------------------------------------------------
-    private async Task<User> SeedUserWithRoleAsync(string userName, string role, Institution? institution)
+    private async Task<User> SeedUserAsync(string userName, string role, string password)
     {
         var existing = await _userManager.FindByNameAsync(userName);
         if (existing is not null) return existing;
 
         var user = new User { UserName = userName, Email = $"{userName}@lyra.local" };
-        var result = await _userManager.CreateAsync(user, DemoPassword);
+        var result = await _userManager.CreateAsync(user, password);
         if (!result.Succeeded)
             throw new InvalidOperationException(
                 $"No se pudo crear {userName}: {string.Join(", ", result.Errors.Select(e => e.Description))}");
@@ -202,440 +173,626 @@ public class ContextInitializer
     }
 
     // -------------------------------------------------------------
+    // Normalización de nombres para UserName
+    // -------------------------------------------------------------
+    private static string NormalizeUserName(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return "x";
+
+        var decomposed = value.Normalize(System.Text.NormalizationForm.FormD);
+        var filtered = new string(decomposed
+            .Where(c => System.Globalization.CharUnicodeInfo.GetUnicodeCategory(c)
+                        != System.Globalization.UnicodeCategory.NonSpacingMark)
+            .Where(char.IsLetterOrDigit)
+            .ToArray());
+
+        return string.IsNullOrWhiteSpace(filtered) ? "x" : filtered.ToLowerInvariant();
+    }
+
+    // -------------------------------------------------------------
     // Perfiles
     // -------------------------------------------------------------
-    private async Task<Administrator> SeedDirectorProfileAsync(User user, Institution institution, string name)
+    private async Task SeedDirectorAsync(User user, Institution institution, string name)
     {
-        var existing = await _context.Administrators.FirstOrDefaultAsync(a => a.UserId == user.Id);
-        if (existing is not null) return existing;
-
-        var entity = new Administrator
+        if (await _context.Administrators.AnyAsync(a => a.UserId == user.Id)) return;
+        _context.Administrators.Add(new Administrator
         {
             UserId = user.Id,
             AdminName = name,
             AdminSalary = 5000,
             IdInstitution = institution.IdInstitution
-        };
-        _context.Administrators.Add(entity);
+        });
         await _context.SaveChangesAsync();
-        return entity;
     }
 
-    private async Task<MaintenanceWorker> SeedMaintenanceProfileAsync(User user, Institution institution, string name)
+    private async Task SeedMaintenanceAsync(User user, Institution institution, string name)
     {
-        var existing = await _context.MaintenanceWorkers.FirstOrDefaultAsync(m => m.UserId == user.Id);
-        if (existing is not null) return existing;
-
-        var entity = new MaintenanceWorker
+        if (await _context.MaintenanceWorkers.AnyAsync(m => m.UserId == user.Id)) return;
+        _context.MaintenanceWorkers.Add(new MaintenanceWorker
         {
             UserId = user.Id,
             NameMaint = name,
             SalaryMaint = 2500,
             IdInstitution = institution.IdInstitution
-        };
-        _context.MaintenanceWorkers.Add(entity);
+        });
         await _context.SaveChangesAsync();
-        return entity;
     }
 
-    private async Task<Secretary> SeedSecretaryProfileAsync(User user, Institution institution, string name)
+    private async Task SeedSecretaryAsync(User user, Institution institution, string name)
     {
-        var existing = await _context.Secretaries.FirstOrDefaultAsync(s => s.UserId == user.Id);
-        if (existing is not null) return existing;
-
-        var entity = new Secretary
+        if (await _context.Secretaries.AnyAsync(s => s.UserId == user.Id)) return;
+        _context.Secretaries.Add(new Secretary
         {
             UserId = user.Id,
             NameS = name,
             SalaryS = 3000,
             IdInstitution = institution.IdInstitution
-        };
-        _context.Secretaries.Add(entity);
+        });
         await _context.SaveChangesAsync();
-        return entity;
     }
 
-    private async Task<Professor> SeedProfessorProfileAsync(
-        User user, Institution institution, string name, string spec, bool isDean)
+    private async Task SeedYearHeadAsync(User user, Institution institution, string name)
     {
-        var existing = await _context.Professors.FirstOrDefaultAsync(p => p.UserId == user.Id);
-        if (existing is not null) return existing;
-
-        var entity = new Professor
-        {
-            UserId = user.Id,
-            NameProf = name,
-            Contract = "Tiempo Completo",
-            Spec = spec,
-            Salary = 4000,
-            IsDean = isDean,
-            LaboralExperience = 8,
-            UseAuxMean = false,
-            IdInstitution = institution.IdInstitution
-        };
-        _context.Professors.Add(entity);
-        await _context.SaveChangesAsync();
-        return entity;
-    }
-
-    private async Task<YearHead> SeedYearHeadProfileAsync(User user, Institution institution, string name)
-    {
-        var existing = await _context.YearHeads.FirstOrDefaultAsync(y => y.UserId == user.Id);
-        if (existing is not null) return existing;
-
-        var entity = new YearHead
+        if (await _context.YearHeads.AnyAsync(y => y.UserId == user.Id)) return;
+        _context.YearHeads.Add(new YearHead
         {
             UserId = user.Id,
             NameYearHead = name,
             IdInstitution = institution.IdInstitution
-        };
-        _context.YearHeads.Add(entity);
+        });
         await _context.SaveChangesAsync();
-        return entity;
-    }
-
-    private async Task<Student> SeedStudentProfileAsync(
-        User user, Institution institution, Course course, string name, string lastName)
-    {
-        var existing = await _context.Students.FirstOrDefaultAsync(s => s.UserId == user.Id);
-        if (existing is not null) return existing;
-
-        var entity = new Student
-        {
-            UserId = user.Id,
-            Name1 = name,
-            LastName1 = lastName,
-            BirthDate = new DateTime(2010, 1, 1),
-            Gender = "Masculino",
-            DocType = "DNI",
-            DocNumber = $"{Random.Shared.Next(10_000_000, 99_999_999)}",
-            Email = $"{user.UserName}@lyra.local",
-            Phone = "+53 5555-0000",
-            Address = "Calle Falsa 123",
-            Level = "Secundaria",
-            Grade = "1ro",
-            Section = "A",
-            AdmissionDate = DateTime.UtcNow.AddYears(-1),
-            AcademicYear = "2024-2025",
-            InitialStatus = "Nuevo",
-            TutorName = "Tutor Legal",
-            TutorPhone = "+53 5555-1111",
-            EmergencyContact = "Contacto Emergencia",
-            IsActive = true,
-            IdC = course.IdC,
-            IdInstitution = institution.IdInstitution
-        };
-        _context.Students.Add(entity);
-        await _context.SaveChangesAsync();
-        return entity;
     }
 
     // -------------------------------------------------------------
-    // Entidades base
+    // Cursos
     // -------------------------------------------------------------
-    private async Task<Course> SeedCourseAsync(Institution institution)
+    private async Task<List<Course>> SeedCoursesAsync(Institution institution)
     {
-        var existing = await _context.Courses.FirstOrDefaultAsync(c => c.IdInstitution == institution.IdInstitution);
-        if (existing is not null) return existing;
+        var existing = await _context.Courses
+            .Where(c => c.IdInstitution == institution.IdInstitution)
+            .ToListAsync();
+        if (existing.Count >= 3) return existing;
 
-        var entity = new Course
+        var names = new[] { "2023-2024", "2024-2025", "2025-2026" };
+        foreach (var name in names)
         {
-            CourseName = "2024-2025",
-            IdInstitution = institution.IdInstitution
-        };
-        _context.Courses.Add(entity);
+            if (existing.Any(c => c.CourseName == name)) continue;
+            _context.Courses.Add(new Course
+            {
+                CourseName = name,
+                IdInstitution = institution.IdInstitution
+            });
+        }
         await _context.SaveChangesAsync();
-        return entity;
+        return await _context.Courses
+            .Where(c => c.IdInstitution == institution.IdInstitution)
+            .ToListAsync();
     }
 
-    private async Task<ClassRoom> SeedClassRoomAsync(Institution institution)
+    // -------------------------------------------------------------
+    // Aulas (5)
+    // -------------------------------------------------------------
+    private async Task<List<ClassRoom>> SeedClassRoomsAsync(Institution institution)
     {
-        var existing = await _context.ClassRooms.FirstOrDefaultAsync(c => c.IdInstitution == institution.IdInstitution);
-        if (existing is not null) return existing;
+        var existing = await _context.ClassRooms
+            .Where(c => c.IdInstitution == institution.IdInstitution)
+            .ToListAsync();
+        if (existing.Count >= 5) return existing;
 
-        var entity = new ClassRoom
+        var rooms = new[]
         {
-            Location = "Aula 101",
-            Capacity = 30,
-            IsAviable = true,
-            IdInstitution = institution.IdInstitution
+            new { Location = "Aula 101", Capacity = 30 },
+            new { Location = "Aula 102", Capacity = 28 },
+            new { Location = "Laboratorio 201", Capacity = 20 },
+            new { Location = "Laboratorio 202", Capacity = 20 },
+            new { Location = "Biblioteca", Capacity = 50 }
         };
-        _context.ClassRooms.Add(entity);
+
+        foreach (var room in rooms)
+        {
+            if (existing.Any(c => c.Location == room.Location)) continue;
+            _context.ClassRooms.Add(new ClassRoom
+            {
+                Location = room.Location,
+                Capacity = room.Capacity,
+                IsAviable = true,
+                IdInstitution = institution.IdInstitution
+            });
+        }
         await _context.SaveChangesAsync();
-        return entity;
+        return await _context.ClassRooms
+            .Where(c => c.IdInstitution == institution.IdInstitution)
+            .ToListAsync();
     }
 
-    private async Task<Subject> SeedSubjectAsync(
-        Institution institution, ClassRoom classRoom, string name, string grade, string section)
+    // -------------------------------------------------------------
+    // Asignaturas (6)
+    // -------------------------------------------------------------
+    private async Task<List<Subject>> SeedSubjectsAsync(
+        Institution institution, List<ClassRoom> classRooms)
     {
         var existing = await _context.Subjects
-            .FirstOrDefaultAsync(s => s.IdInstitution == institution.IdInstitution && s.NameSub == name);
-        if (existing is not null) return existing;
+            .Where(s => s.IdInstitution == institution.IdInstitution)
+            .ToListAsync();
+        if (existing.Count >= 6) return existing;
 
-        var entity = new Subject
+        var defs = new[]
         {
-            NameSub = name,
-            StudyProgram = grade,
-            CourseLoad = 4,
-            IdClassRoom = classRoom.IdClassR,
-            IdInstitution = institution.IdInstitution
+            new { Name = "Matemáticas", Program = "1ro", Load = 4 },
+            new { Name = "Física", Program = "1ro", Load = 3 },
+            new { Name = "Química", Program = "2do", Load = 3 },
+            new { Name = "Historia", Program = "2do", Load = 2 },
+            new { Name = "Lengua", Program = "1ro", Load = 4 },
+            new { Name = "Inglés", Program = "1ro", Load = 3 }
         };
-        _context.Subjects.Add(entity);
-        await _context.SaveChangesAsync();
-        return entity;
-    }
 
-    private async Task<TechnologicalMeans> SeedTechMeanAsync(Institution institution)
-    {
-        var existing = await _context.TechnologicalMeans.FirstOrDefaultAsync(t => t.IdInstitution == institution.IdInstitution);
-        if (existing is not null) return existing;
-
-        var entity = new TechnologicalMeans
+        for (int i = 0; i < defs.Length; i++)
         {
-            NameMean = "Proyector Epson",
-            State = "Bueno",
-            IsAviable = true,
-            IsActive = true,
-            IdInstitution = institution.IdInstitution
-        };
-        _context.TechnologicalMeans.Add(entity);
-        await _context.SaveChangesAsync();
-        return entity;
-    }
-
-    private async Task<AuxiliaryMeans> SeedAuxMeanAsync(Institution institution)
-    {
-        var existing = await _context.AuxiliaryMeans.FirstOrDefaultAsync(a => a.IdInstitution == institution.IdInstitution);
-        if (existing is not null) return existing;
-
-        var entity = new AuxiliaryMeans
-        {
-            NameMean = "Pizarra Blanca",
-            State = "Bueno",
-            Type = "Pizarra",
-            IsAviable = true,
-            IsActive = true,
-            IdInstitution = institution.IdInstitution
-        };
-        _context.AuxiliaryMeans.Add(entity);
-        await _context.SaveChangesAsync();
-        return entity;
-    }
-
-    // -------------------------------------------------------------
-    // Relaciones
-    // -------------------------------------------------------------
-    private async Task LinkProfessorSubjectAsync(Professor professor, Subject subject)
-    {
-        var exists = await _context.ProfessorSubjects
-            .AnyAsync(ps => ps.IdProf == professor.IdProf && ps.IdSub == subject.IdSub);
-        if (exists) return;
-
-        _context.ProfessorSubjects.Add(new ProfessorSubject
-        {
-            IdProf = professor.IdProf,
-            IdSub = subject.IdSub
-        });
-        await _context.SaveChangesAsync();
-    }
-
-    private async Task LinkStudentSubjectAsync(Student student, Subject subject)
-    {
-        var exists = await _context.StudentSubjects
-            .AnyAsync(ss => ss.IdStud == student.IdStud && ss.IdSub == subject.IdSub);
-        if (exists) return;
-
-        _context.StudentSubjects.Add(new StudentSubject
-        {
-            IdStud = student.IdStud,
-            IdSub = subject.IdSub,
-            NJAbsents = 0
-        });
-        await _context.SaveChangesAsync();
-    }
-
-    private async Task LinkClassRoomTechMeanAsync(ClassRoom classRoom, TechnologicalMeans techMean)
-    {
-        var exists = await _context.ClassRoomTechMeans
-            .AnyAsync(c => c.IdClassRoom == classRoom.IdClassR && c.IdTechMean == techMean.IdMean);
-        if (exists) return;
-
-        _context.ClassRoomTechMeans.Add(new ClassRoomTechMean
-        {
-            IdClassRoom = classRoom.IdClassR,
-            IdTechMean = techMean.IdMean
-        });
-        await _context.SaveChangesAsync();
-    }
-
-    private async Task LinkSubjectAuxMeanAsync(Subject subject, AuxiliaryMeans auxMean)
-    {
-        var exists = await _context.SubjectAuxMeans
-            .AnyAsync(s => s.IdSub == subject.IdSub && s.IdAuxMean == auxMean.IdMean);
-        if (exists) return;
-
-        _context.SubjectAuxMeans.Add(new SubjectAuxMean
-        {
-            IdSub = subject.IdSub,
-            IdAuxMean = auxMean.IdMean
-        });
-        await _context.SaveChangesAsync();
-    }
-
-    // -------------------------------------------------------------
-    // Notas, asistencia, horario
-    // -------------------------------------------------------------
-    private async Task SeedGradesAsync(
-        Professor professor, Subject subject, params Student[] students)
-    {
-        var random = new Random(42);
-        foreach (var student in students)
-        {
-            var ss = await _context.StudentSubjects
-                .FirstOrDefaultAsync(x => x.IdStud == student.IdStud && x.IdSub == subject.IdSub);
-            if (ss is null) continue;
-
-            var exists = await _context.ProfessorStudentSubjects
-                .AnyAsync(p => p.IdProf == professor.IdProf && p.IdStudSub == ss.IdStudSub);
-            if (exists) continue;
-
-            _context.ProfessorStudentSubjects.Add(new ProfessorStudentSubject
+            var def = defs[i];
+            if (existing.Any(s => s.NameSub == def.Name)) continue;
+            var room = classRooms[i % classRooms.Count];
+            _context.Subjects.Add(new Subject
             {
-                IdProf = professor.IdProf,
-                IdStudSub = ss.IdStudSub,
-                StudentGrades = random.Next(6, 11) // 0–10
+                NameSub = def.Name,
+                StudyProgram = def.Program,
+                CourseLoad = def.Load,
+                IdClassRoom = room.IdClassR,
+                IdInstitution = institution.IdInstitution
+            });
+        }
+        await _context.SaveChangesAsync();
+        return await _context.Subjects
+            .Where(s => s.IdInstitution == institution.IdInstitution)
+            .ToListAsync();
+    }
+
+    // -------------------------------------------------------------
+    // Profesores (5)
+    // -------------------------------------------------------------
+    private async Task<List<Professor>> SeedProfessorsAsync(
+        Institution institution, List<Subject> subjects)
+    {
+        var existing = await _context.Professors
+            .Where(p => p.IdInstitution == institution.IdInstitution)
+            .ToListAsync();
+        if (existing.Count >= 5) return existing;
+
+        var defs = new[]
+        {
+            new { User = "prof.juan.gomez", Name = "Juan Gomez", Spec = "Matemáticas", IsDean = true },
+            new { User = "prof.maria.lopez", Name = "Maria Lopez", Spec = "Física", IsDean = false },
+            new { User = "prof.carlos.diaz", Name = "Carlos Diaz", Spec = "Química", IsDean = false },
+            new { User = "prof.laura.perez", Name = "Laura Perez", Spec = "Historia", IsDean = false },
+            new { User = "prof.diego.ramirez", Name = "Diego Ramirez", Spec = "Inglés", IsDean = false }
+        };
+
+        foreach (var def in defs)
+        {
+            var user = await _userManager.FindByNameAsync(def.User);
+            if (user is null)
+            {
+                user = await SeedUserAsync(def.User, Roles.Professor, DemoPassword);
+            }
+
+            if (existing.Any(p => p.UserId == user.Id)) continue;
+
+            _context.Professors.Add(new Professor
+            {
+                UserId = user.Id,
+                NameProf = def.Name,
+                Contract = "Tiempo Completo",
+                Spec = def.Spec,
+                Salary = 4000,
+                IsDean = def.IsDean,
+                LaboralExperience = 8,
+                UseAuxMean = false,
+                IdInstitution = institution.IdInstitution
+            });
+        }
+        await _context.SaveChangesAsync();
+        return await _context.Professors
+            .Where(p => p.IdInstitution == institution.IdInstitution)
+            .ToListAsync();
+    }
+
+    // -------------------------------------------------------------
+    // Estudiantes (15) — CON NORMALIZACIÓN
+    // -------------------------------------------------------------
+    private async Task<List<Student>> SeedStudentsAsync(
+        Institution institution, List<Course> courses)
+    {
+        var existing = await _context.Students
+            .Where(s => s.IdInstitution == institution.IdInstitution)
+            .ToListAsync();
+        if (existing.Count >= 15) return existing;
+
+        var firstNames = new[] { "Pedro", "Ana", "Luis", "Lucía", "Jorge", "Carla", "Miguel", "Sofía", "Andrés", "Valeria", "Diego", "Camila", "Mateo", "Isabella", "Daniel" };
+        var lastNames = new[] { "Torres", "Ruiz", "Soto", "Martínez", "García", "Rodríguez", "Pérez", "Sánchez", "Ramírez", "Cruz", "Flores", "Morales", "Ortiz", "Gómez", "Díaz" };
+
+        for (int i = 0; i < firstNames.Length; i++)
+        {
+            // NORMALIZAR: sin tildes, minúsculas, solo letras/dígitos
+            var normalizedFirst = NormalizeUserName(firstNames[i]);
+            var normalizedLast = NormalizeUserName(lastNames[i]);
+            var userName = $"alumno.{normalizedFirst}.{normalizedLast}";
+
+            var user = await _userManager.FindByNameAsync(userName);
+            if (user is null)
+            {
+                user = await SeedUserAsync(userName, Roles.Student, DemoPassword);
+            }
+
+            if (existing.Any(s => s.UserId == user.Id)) continue;
+
+            var course = courses[i % courses.Count];
+
+            _context.Students.Add(new Student
+            {
+                UserId = user.Id,
+                Name1 = firstNames[i],
+                LastName1 = lastNames[i],
+                LastName2 = null,
+                BirthDate = new DateTime(2010, (i % 12) + 1, (i % 28) + 1),
+                Gender = i % 2 == 0 ? "Masculino" : "Femenino",
+                DocType = "DNI",
+                DocNumber = $"{(10000000 + i):D8}",
+                Email = $"{userName}@lyra.local",
+                Phone = $"+53 5555-{i:D4}",
+                Address = $"Calle {i + 1}, Ciudad",
+                Level = "Secundaria",
+                Grade = ((i % 3) + 1) + "ro",
+                Section = i % 2 == 0 ? "A" : "B",
+                AdmissionDate = DateTime.UtcNow.AddMonths(-(i + 1)),
+                AcademicYear = course.CourseName,
+                InitialStatus = "Nuevo",
+                TutorName = $"Tutor {lastNames[i]}",
+                TutorPhone = $"+53 5555-9{i:D3}",
+                EmergencyContact = $"Emergencia {lastNames[i]}",
+                IsActive = true,
+                IdC = course.IdC,
+                IdInstitution = institution.IdInstitution
+            });
+        }
+        await _context.SaveChangesAsync();
+        return await _context.Students
+            .Where(s => s.IdInstitution == institution.IdInstitution)
+            .ToListAsync();
+    }
+
+    // -------------------------------------------------------------
+    // Medios
+    // -------------------------------------------------------------
+    private async Task<List<TechnologicalMeans>> SeedTechMeansAsync(Institution institution)
+    {
+        var existing = await _context.TechnologicalMeans
+            .Where(t => t.IdInstitution == institution.IdInstitution)
+            .ToListAsync();
+        if (existing.Count >= 3) return existing;
+
+        var names = new[] { "Proyector Epson", "PC de escritorio", "Tablet Samsung" };
+        foreach (var name in names)
+        {
+            if (existing.Any(t => t.NameMean == name)) continue;
+            _context.TechnologicalMeans.Add(new TechnologicalMeans
+            {
+                NameMean = name,
+                State = "Bueno",
+                IsAviable = true,
+                IsActive = true,
+                IdInstitution = institution.IdInstitution
+            });
+        }
+        await _context.SaveChangesAsync();
+        return await _context.TechnologicalMeans
+            .Where(t => t.IdInstitution == institution.IdInstitution)
+            .ToListAsync();
+    }
+
+    private async Task<List<AuxiliaryMeans>> SeedAuxMeansAsync(Institution institution)
+    {
+        var existing = await _context.AuxiliaryMeans
+            .Where(a => a.IdInstitution == institution.IdInstitution)
+            .ToListAsync();
+        if (existing.Count >= 3) return existing;
+
+        var defs = new[]
+        {
+            new { Name = "Pizarra Blanca", Type = "Pizarra" },
+            new { Name = "Marcador", Type = "Marcador" },
+            new { Name = "Borrador", Type = "Borrador" }
+        };
+        foreach (var def in defs)
+        {
+            if (existing.Any(a => a.NameMean == def.Name)) continue;
+            _context.AuxiliaryMeans.Add(new AuxiliaryMeans
+            {
+                NameMean = def.Name,
+                State = "Bueno",
+                Type = def.Type,
+                IsAviable = true,
+                IsActive = true,
+                IdInstitution = institution.IdInstitution
+            });
+        }
+        await _context.SaveChangesAsync();
+        return await _context.AuxiliaryMeans
+            .Where(a => a.IdInstitution == institution.IdInstitution)
+            .ToListAsync();
+    }
+
+    // -------------------------------------------------------------
+    // Relaciones N:N
+    // -------------------------------------------------------------
+    private async Task SeedClassRoomTechMeansAsync(
+        List<ClassRoom> classRooms, List<TechnologicalMeans> means)
+    {
+        if (await _context.ClassRoomTechMeans.AnyAsync()) return;
+        for (int i = 0; i < Math.Min(classRooms.Count, means.Count); i++)
+        {
+            _context.ClassRoomTechMeans.Add(new ClassRoomTechMean
+            {
+                IdClassRoom = classRooms[i].IdClassR,
+                IdTechMean = means[i].IdMean
             });
         }
         await _context.SaveChangesAsync();
     }
 
-    private async Task SeedAttendanceAsync(Subject subject, params Student[] students)
+    private async Task SeedSubjectAuxMeansAsync(
+        List<Subject> subjects, List<AuxiliaryMeans> means)
     {
-        var today = DateTime.UtcNow.Date;
-        for (var i = 0; i < 5; i++) 
-        { 
-            var date = today.AddDays(-i);
-            foreach (var student in students)
+        if (await _context.SubjectAuxMeans.AnyAsync()) return;
+        for (int i = 0; i < Math.Min(subjects.Count, means.Count); i++)
+        {
+            _context.SubjectAuxMeans.Add(new SubjectAuxMean
             {
-                var exists = await _context.Attendances
-                    .AnyAsync(a => a.IdSub == subject.IdSub && a.IdStud == student.IdStud && a.Date == date);
-                if (exists) continue;
+                IdSub = subjects[i].IdSub,
+                IdAuxMean = means[i].IdMean
+            });
+        }
+        await _context.SaveChangesAsync();
+    }
 
-                _context.Attendances.Add(new Attendance
+    private async Task SeedProfessorSubjectsAsync(
+        List<Professor> professors, List<Subject> subjects)
+    {
+        if (await _context.ProfessorSubjects.AnyAsync()) return;
+        for (int i = 0; i < subjects.Count; i++)
+        {
+            var professor = professors[i % professors.Count];
+            _context.ProfessorSubjects.Add(new ProfessorSubject
+            {
+                IdProf = professor.IdProf,
+                IdSub = subjects[i].IdSub
+            });
+        }
+        await _context.SaveChangesAsync();
+    }
+
+    private async Task SeedStudentSubjectsAsync(
+        List<Student> students, List<Subject> subjects)
+    {
+        if (await _context.StudentSubjects.AnyAsync()) return;
+        foreach (var student in students)
+        {
+            var taken = subjects.OrderBy(_ => Guid.NewGuid()).Take(3).ToList();
+            foreach (var subject in taken)
+            {
+                _context.StudentSubjects.Add(new StudentSubject
                 {
-                    IdSub = subject.IdSub,
                     IdStud = student.IdStud,
-                    Date = date,
-                    Status = AttendanceStatus.Present
+                    IdSub = subject.IdSub,
+                    NJAbsents = 0
                 });
             }
         }
         await _context.SaveChangesAsync();
     }
 
-    private async Task SeedScheduleAsync(Subject subject, Professor professor, ClassRoom classRoom)
+    private async Task SeedProfessorStudentSubjectsAsync(
+        List<Professor> professors, List<Student> students, List<Subject> subjects)
     {
-        var exists = await _context.Schedules
-            .AnyAsync(s => s.IdSub == subject.IdSub && s.IdProf == professor.IdProf);
-        if (exists) return;
+        if (await _context.ProfessorStudentSubjects.AnyAsync()) return;
 
-        _context.Schedules.AddRange(
-            new Schedule
+        var professorSubjects = await _context.ProfessorSubjects.ToListAsync();
+        var studentSubjects = await _context.StudentSubjects.ToListAsync();
+        var random = new Random(42);
+
+        foreach (var ps in professorSubjects)
+        {
+            var matching = studentSubjects.Where(ss => ss.IdSub == ps.IdSub).ToList();
+            foreach (var ss in matching)
             {
-                IdSub = subject.IdSub,
-                IdProf = professor.IdProf,
-                IdClassR = classRoom.IdClassR,
-                Day = DayOfWeek.Monday,
-                StartTime = new TimeSpan(8, 0, 0),
-                EndTime = new TimeSpan(9, 30, 0)
-            },
-            new Schedule
-            {
-                IdSub = subject.IdSub,
-                IdProf = professor.IdProf,
-                IdClassR = classRoom.IdClassR,
-                Day = DayOfWeek.Wednesday,
-                StartTime = new TimeSpan(10, 0, 0),
-                EndTime = new TimeSpan(11, 30, 0)
+                if (await _context.ProfessorStudentSubjects
+                    .AnyAsync(p => p.IdProf == ps.IdProf && p.IdStudSub == ss.IdStudSub))
+                    continue;
+
+                _context.ProfessorStudentSubjects.Add(new ProfessorStudentSubject
+                {
+                    IdProf = ps.IdProf,
+                    IdStudSub = ss.IdStudSub,
+                    StudentGrades = random.Next(5, 11)
+                });
             }
-        );
+        }
         await _context.SaveChangesAsync();
     }
 
-    // -------------------------------------------------------------
-    // Evaluaciones
-    // -------------------------------------------------------------
-    private async Task SeedProfessorEvaluationsAsync(
-        Professor professor, params Student[] students)
+    private async Task SeedSchedulesAsync(
+        List<Subject> subjects, List<Professor> professors, List<ClassRoom> classRooms)
     {
+        if (await _context.Schedules.AnyAsync()) return;
+
+        var days = new[] { DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday, DayOfWeek.Friday };
+        var times = new[] { new TimeSpan(8, 0, 0), new TimeSpan(10, 0, 0), new TimeSpan(14, 0, 0) };
+
+        for (int i = 0; i < subjects.Count; i++)
+        {
+            var subject = subjects[i];
+            var professor = professors[i % professors.Count];
+            var room = classRooms[i % classRooms.Count];
+
+            for (int j = 0; j < 2; j++)
+            {
+                _context.Schedules.Add(new Schedule
+                {
+                    IdSub = subject.IdSub,
+                    IdProf = professor.IdProf,
+                    IdClassR = room.IdClassR,
+                    Day = days[(i + j) % days.Length],
+                    StartTime = times[(i + j) % times.Length],
+                    EndTime = times[(i + j) % times.Length].Add(TimeSpan.FromMinutes(90))
+                });
+            }
+        }
+        await _context.SaveChangesAsync();
+    }
+
+    private async Task SeedAttendancesAsync(
+        List<Subject> subjects, List<Student> students)
+    {
+        if (await _context.Attendances.AnyAsync()) return;
+
         var random = new Random(7);
+        var today = DateTime.UtcNow.Date;
+
+        for (int d = 0; d < 5; d++)
+        {
+            var date = today.AddDays(-d);
+            if (date.DayOfWeek == DayOfWeek.Saturday || date.DayOfWeek == DayOfWeek.Sunday) continue;
+
+            foreach (var student in students)
+            {
+                var studentSubjects = await _context.StudentSubjects
+                    .Where(ss => ss.IdStud == student.IdStud)
+                    .ToListAsync();
+
+                foreach (var ss in studentSubjects)
+                {
+                    var status = random.Next(0, 10) < 9
+                        ? AttendanceStatus.Present
+                        : (random.Next(0, 2) == 0 ? AttendanceStatus.Absent : AttendanceStatus.Late);
+
+                    _context.Attendances.Add(new Attendance
+                    {
+                        IdSub = ss.IdSub,
+                        IdStud = student.IdStud,
+                        Date = date,
+                        Status = status
+                    });
+                }
+            }
+        }
+        await _context.SaveChangesAsync();
+    }
+
+    private async Task SeedProfessorEvaluationsAsync(
+        List<Professor> professors, List<Student> students)
+    {
+        if (await _context.ProfessorEvaluations.AnyAsync()) return;
+
+        var random = new Random(11);
+        var comments = new[]
+        {
+            "Excelente docente, explica muy bien.",
+            "Muy claro en sus explicaciones.",
+            "Podría mejorar la dinámica de clase.",
+            "Buen manejo de la asignatura.",
+            "Los ejercicios son muy útiles."
+        };
+
         foreach (var student in students)
         {
-            var exists = await _context.ProfessorEvaluations
-                .AnyAsync(e => e.IdProf == professor.IdProf && e.IdStud == student.IdStud);
-            if (exists) continue;
-
-            _context.ProfessorEvaluations.Add(new ProfessorEvaluation
+            var chosen = professors.OrderBy(_ => Guid.NewGuid()).Take(2).ToList();
+            foreach (var prof in chosen)
             {
-                IdProf = professor.IdProf,
-                IdStud = student.IdStud,
-                Rating = random.Next(3, 6),
-                Comment = "Buen docente"
-            });
+                if (await _context.ProfessorEvaluations
+                    .AnyAsync(e => e.IdProf == prof.IdProf && e.IdStud == student.IdStud))
+                    continue;
+
+                _context.ProfessorEvaluations.Add(new ProfessorEvaluation
+                {
+                    IdProf = prof.IdProf,
+                    IdStud = student.IdStud,
+                    Rating = random.Next(3, 6),
+                    Comment = comments[random.Next(comments.Length)],
+                    CreatedAt = DateTime.UtcNow.AddDays(-random.Next(1, 30))
+                });
+            }
         }
         await _context.SaveChangesAsync();
     }
 
-    // -------------------------------------------------------------
-    // Notificaciones y auditoría
-    // -------------------------------------------------------------
-    private async Task SeedNotificationsAsync(params User[] users)
+    private async Task SeedNotificationsAsync(
+        User director, User secretary, List<Professor> professors, List<Student> students)
     {
-        foreach (var user in users)
-        {
-            var exists = await _context.Notifications.AnyAsync(n => n.UserId == user.Id);
-            if (exists) continue;
+        if (await _context.Notifications.AnyAsync()) return;
 
-            _context.Notifications.AddRange(
-                new Notification
-                {
-                    UserId = user.Id,
-                    Title = "Bienvenido a LYRA",
-                    Message = "Tu cuenta ha sido creada exitosamente.",
-                    Type = NotificationType.Success,
-                    Module = "system"
-                },
-                new Notification
-                {
-                    UserId = user.Id,
-                    Title = "Reunión de claustro",
-                    Message = "La reunión de claustro será el viernes a las 15:00.",
-                    Type = NotificationType.Info,
-                    Module = "events"
-                }
-            );
+        await AddNotification(director.Id, "Bienvenido a LYRA", "Tu cuenta ha sido creada exitosamente.", NotificationType.Success, "system");
+        await AddNotification(director.Id, "Reunión de claustro", "La reunión de claustro será el viernes a las 15:00.", NotificationType.Info, "events");
+        await AddNotification(director.Id, "Reporte mensual disponible", "El reporte de octubre ya está disponible.", NotificationType.Info, "reports");
+
+        await AddNotification(secretary.Id, "Bienvenido a LYRA", "Tu cuenta ha sido creada exitosamente.", NotificationType.Success, "system");
+        await AddNotification(secretary.Id, "Nuevas matrículas pendientes", "Hay 3 matrículas pendientes de revisión.", NotificationType.Warning, "enrollments");
+
+        foreach (var prof in professors)
+        {
+            var user = await _userManager.FindByIdAsync(prof.UserId);
+            if (user is null) continue;
+            await AddNotification(user.Id, "Bienvenido a LYRA", "Tu cuenta ha sido creada exitosamente.", NotificationType.Success, "system");
+            await AddNotification(user.Id, "Notas pendientes", "Tienes notas pendientes de calificar.", NotificationType.Warning, "grades");
         }
+
+        foreach (var student in students)
+        {
+            var user = await _userManager.FindByIdAsync(student.UserId);
+            if (user is null) continue;
+            await AddNotification(user.Id, "Bienvenido a LYRA", "Tu cuenta ha sido creada exitosamente.", NotificationType.Success, "system");
+            await AddNotification(user.Id, "Calificaciones disponibles", "Ya puedes consultar tus calificaciones del mes.", NotificationType.Info, "grades");
+        }
+    }
+
+    private async Task AddNotification(string userId, string title, string message, NotificationType type, string module)
+    {
+        _context.Notifications.Add(new Notification
+        {
+            UserId = userId,
+            Title = title,
+            Message = message,
+            Type = type,
+            Module = module,
+            IsRead = false,
+            CreatedAt = DateTime.UtcNow.AddMinutes(-new Random().Next(1, 1440))
+        });
         await _context.SaveChangesAsync();
     }
 
-    private async Task SeedAuditLogAsync(params User[] users)
+    private async Task SeedAuditLogsAsync(
+        User director, User superAdmin, User secretary)
     {
-        var random = new Random(11);
+        if (await _context.AuditLogs.AnyAsync()) return;
+
+        var random = new Random(17);
+        var actions = new[] { "Login", "Create", "Update", "Delete", "View" };
+        var modules = new[] { "Auth", "Students", "Professors", "Subjects", "ClassRooms", "Grades", "Attendance" };
+
+        var users = new[] { director, superAdmin, secretary };
         foreach (var user in users)
         {
-            var exists = await _context.AuditLogs.AnyAsync(a => a.UserId == user.Id);
-            if (exists) continue;
-
-            _context.AuditLogs.Add(new AuditLog
+            for (int i = 0; i < 5; i++)
             {
-                UserId = user.Id,
-                UserName = user.UserName ?? "unknown",
-                Action = "Login",
-                Module = "Auth",
-                Details = "Inicio de sesión correcto",
-                Ip = $"192.168.0.{random.Next(1, 255)}",
-                Type = AuditLogType.Success
-            });
+                _context.AuditLogs.Add(new AuditLog
+                {
+                    UserId = user.Id,
+                    UserName = user.UserName ?? "unknown",
+                    Action = actions[random.Next(actions.Length)],
+                    Module = modules[random.Next(modules.Length)],
+                    Details = $"Acción de prueba {i + 1}",
+                    Ip = $"192.168.0.{random.Next(1, 255)}",
+                    Date = DateTime.UtcNow.AddHours(-random.Next(1, 72)),
+                    Type = AuditLogType.Info
+                });
+            }
         }
         await _context.SaveChangesAsync();
     }

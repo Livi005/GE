@@ -2,8 +2,11 @@ import { useState, useEffect } from 'react';
 import { SubjectService, Subject } from '../services/subject.service';
 import { Plus, Edit2, Trash2, X } from 'lucide-react';
 import LoadingState from '../components/LoadingState';
+import { SUBJECT_OPTIONS } from '../utils/constants';
+import { useAuthStore } from '../store/authStore';
 
 export default function SubjectsPage() {
+  const { institutionId } = useAuthStore();
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [loading, setLoading] = useState(true);
   
@@ -14,6 +17,9 @@ export default function SubjectsPage() {
   const [studyProgram, setStudyProgram] = useState('');
   const [courseLoad, setCourseLoad] = useState(10);
   const [idClassRoom, setIdClassRoom] = useState(1);
+
+  // Estado para opción personalizada
+  const [isCustomSubject, setIsCustomSubject] = useState(false);
 
   useEffect(() => { loadSubjects(); }, []);
 
@@ -26,29 +32,37 @@ export default function SubjectsPage() {
   const handleOpenModal = (sub?: Subject) => {
     if (sub) {
       setEditingId(sub.idSub);
-      setNameSub(sub.nameSub);
       setStudyProgram(sub.studyProgram);
       setCourseLoad(sub.courseLoad);
       setIdClassRoom(sub.idClassRoom);
+      
+      // Verificar si la asignatura está en la lista predefinida
+      if (SUBJECT_OPTIONS.includes(sub.nameSub)) {
+        setNameSub(sub.nameSub);
+        setIsCustomSubject(false);
+      } else {
+        setNameSub(sub.nameSub);
+        setIsCustomSubject(true);
+      }
     } else {
       setEditingId(null);
       setNameSub('');
       setStudyProgram('');
       setCourseLoad(10);
       setIdClassRoom(1);
+      setIsCustomSubject(false);
     }
     setIsModalOpen(true);
   };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    // AÑADIDO idInstitution: 1
     const payload = { 
       nameSub, 
       studyProgram, 
       courseLoad, 
       idClassRoom,
-      idInstitution: 1
+      idInstitution: institutionId || 1
     };
 
     try {
@@ -57,7 +71,6 @@ export default function SubjectsPage() {
       setIsModalOpen(false);
       loadSubjects();
     } catch (error: any) {
-      console.error(error.response?.data);
       alert(error.response?.data?.detail || "Error al guardar la asignatura.");
     }
   };
@@ -125,10 +138,48 @@ export default function SubjectsPage() {
             <button onClick={() => setIsModalOpen(false)} className="absolute top-6 right-6 text-slate-400"><X size={24} /></button>
             <h2 className="text-2xl font-display font-bold mb-6 dark:text-white">{editingId ? 'Editar Asignatura' : 'Nueva Asignatura'}</h2>
             <form onSubmit={handleSave} className="space-y-4">
+              
+              {/* SELECTOR CON OPCIÓN DE ESCRIBIR */}
               <div>
-                <label className="block text-sm font-bold mb-1 dark:text-slate-300">Nombre</label>
-                <input type="text" required value={nameSub} onChange={(e) => setNameSub(e.target.value)} className="w-full px-4 py-2 rounded-xl border dark:bg-slate-700/50 dark:text-white dark:border-slate-600" placeholder="Ej. Matemáticas" />
+                <label className="block text-sm font-bold mb-1 dark:text-slate-300">Asignatura</label>
+                {!isCustomSubject ? (
+                  <select 
+                    required 
+                    value={nameSub} 
+                    onChange={(e) => {
+                      if (e.target.value === 'Otra') {
+                        setIsCustomSubject(true);
+                        setNameSub('');
+                      } else {
+                        setNameSub(e.target.value);
+                      }
+                    }} 
+                    className="w-full px-4 py-2 rounded-xl border dark:bg-slate-700/50 dark:text-white dark:border-slate-600"
+                  >
+                    <option value="">Seleccionar...</option>
+                    {SUBJECT_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                  </select>
+                ) : (
+                  <div className="flex gap-2">
+                    <input 
+                      type="text" 
+                      required 
+                      value={nameSub} 
+                      onChange={(e) => setNameSub(e.target.value)} 
+                      className="w-full px-4 py-2 rounded-xl border dark:bg-slate-700/50 dark:text-white dark:border-slate-600" 
+                      placeholder="Escribe la asignatura..." 
+                    />
+                    <button 
+                      type="button" 
+                      onClick={() => { setIsCustomSubject(false); setNameSub(''); }}
+                      className="px-3 bg-red-100 text-red-600 rounded-xl font-bold"
+                    >
+                      X
+                    </button>
+                  </div>
+                )}
               </div>
+
               <div>
                 <label className="block text-sm font-bold mb-1 dark:text-slate-300">Programa de Estudio</label>
                 <input type="text" required value={studyProgram} onChange={(e) => setStudyProgram(e.target.value)} className="w-full px-4 py-2 rounded-xl border dark:bg-slate-700/50 dark:text-white dark:border-slate-600" placeholder="Ej. Ciencias" />

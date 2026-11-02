@@ -10,9 +10,9 @@ export const CourseService = {
     try {
       const res = await apiClient.get('/course/list');
       return res.data?.value || res.data || [];
-    } catch (error) {
-      console.error("Error cargando cursos", error);
-      return [];
+    } catch (error: any) {
+      console.error("Error cargando cursos:", error.response?.data?.detail || error.message);
+      throw error;
     }
   }
 };

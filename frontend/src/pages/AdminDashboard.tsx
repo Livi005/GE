@@ -13,7 +13,7 @@ export default function AdminDashboard() {
   useEffect(() => {
     const fetchDashboard = async () => {
       try {
-        const res = await apiClient.get('/api/dashboard/admin');
+        const res = await apiClient.get('/dashboard/admin');
         setData(res.data);
       } catch (err) {
         console.error("Error cargando dashboard", err);

@@ -16,7 +16,7 @@ export default function ProfessorDashboard() {
     if (!userName) return;
     const fetchDashboard = async () => {
       try {
-        const res = await apiClient.get(`/api/dashboard/professor/${userName}`);
+        const res = await apiClient.get(`/dashboard/professor/${userName}`);
         setData(res.data);
       } catch (err) {
         console.error(err);

@@ -1,20 +1,31 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { StudentService } from '../services/student.service';
+import { CourseService } from '../services/course.service';
+import { useAuthStore } from '../store/authStore';
 import { User, Mail, Phone, BookOpen, Check, ChevronLeft, GraduationCap, Info, UserCircle2 } from 'lucide-react';
 
 export default function CreateStudentWizard() {
   const navigate = useNavigate();
+  const { institutionId } = useAuthStore(); // Obtenemos el ID real
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const totalSteps = 4;
+
+  // Estado para los cursos reales
+  const [courses, setCourses] = useState<any[]>([]);
 
   const [formData, setFormData] = useState({
     name1: '', lastName1: '', lastName2: '', birthDate: '', gender: '', docType: 'DNI', docNumber: '',
     email: '', phone: '', address: '',
     level: 'Primaria', grade: '1ro', section: 'A', admissionDate: new Date().toISOString().split('T')[0], academicYear: '2024-2025', initialStatus: 'Nuevo',
-    notes: '', tutorName: '', tutorPhone: '', emergencyContact: '', isActive: true, idC: 1
+    notes: '', tutorName: '', tutorPhone: '', emergencyContact: '', isActive: true, idC: '' // idC ahora empieza vacío
   });
+
+  // Cargar cursos al montar el componente
+  useEffect(() => {
+    CourseService.getAll().then(setCourses);
+  }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
@@ -36,8 +47,8 @@ export default function CreateStudentWizard() {
       }
     }
     if (step === 3) {
-      if (!formData.grade || !formData.section || !formData.academicYear) {
-        alert("Por favor, completa todos los campos obligatorios de Info. Académica.");
+      if (!formData.grade || !formData.section || !formData.academicYear || !formData.idC) {
+        alert("Por favor, completa todos los campos obligatorios de Info. Académica (incluyendo el curso).");
         return;
       }
     }
@@ -56,13 +67,13 @@ export default function CreateStudentWizard() {
 
     setLoading(true);
     try {
-      // Payload exacto para el Backend (C#)
+      // Payload con institutionId real y idC numérico
       const payload = {
         name1: formData.name1,
         lastName1: formData.lastName1,
         lastName2: formData.lastName2 || "",
         birthDate: `${formData.birthDate}T00:00:00`,
-        gender: formData.gender, // String, máx 32
+        gender: formData.gender,
         docType: formData.docType,
         docNumber: formData.docNumber,
         email: formData.email,
@@ -79,8 +90,8 @@ export default function CreateStudentWizard() {
         tutorPhone: formData.tutorPhone,
         emergencyContact: formData.emergencyContact,
         isActive: formData.isActive,
-        idC: Number(formData.idC), // Requerido (ID del curso)
-        idInstitution: 1 // Aseguramos que vaya la institución
+        idC: Number(formData.idC),
+        idInstitution: institutionId || 1 // Usamos el del authStore
       };
       
       await StudentService.create(payload);
@@ -189,7 +200,17 @@ export default function CreateStudentWizard() {
                   <div><label className="block text-sm font-bold mb-1 dark:text-slate-300">Sección *</label><input type="text" name="section" required value={formData.section} onChange={handleChange} className="w-full px-4 py-3 rounded-xl border dark:border-slate-600 bg-white/50 dark:bg-slate-700/50 dark:text-white" placeholder="Ej. A" /></div>
                   <div><label className="block text-sm font-bold mb-1 dark:text-slate-300">Año Académico *</label><input type="text" name="academicYear" required value={formData.academicYear} onChange={handleChange} className="w-full px-4 py-3 rounded-xl border dark:border-slate-600 bg-white/50 dark:bg-slate-700/50 dark:text-white" placeholder="Ej. 2024-2025" /></div>
                   <div><label className="block text-sm font-bold mb-1 dark:text-slate-300">Fecha de Ingreso *</label><input type="date" name="admissionDate" required value={formData.admissionDate} onChange={handleChange} className="w-full px-4 py-3 rounded-xl border dark:border-slate-600 bg-white/50 dark:bg-slate-700/50 dark:text-white" /></div>
-                  <div><label className="block text-sm font-bold mb-1 dark:text-slate-300">ID Curso *</label><input type="number" name="idC" required value={formData.idC} onChange={handleChange} className="w-full px-4 py-3 rounded-xl border dark:border-slate-600 bg-white/50 dark:bg-slate-700/50 dark:text-white" placeholder="Ej. 1" /></div>
+                  
+                  {/* SELECT DE CURSOS REALES */}
+                  <div>
+                    <label className="block text-sm font-bold mb-1 dark:text-slate-300">Curso *</label>
+                    <select name="idC" required value={formData.idC} onChange={handleChange} className="w-full px-4 py-3 rounded-xl border dark:border-slate-600 bg-white/50 dark:bg-slate-700/50 dark:text-white">
+                      <option value="">Seleccionar curso...</option>
+                      {courses.map((c: any) => (
+                        <option key={c.idC} value={c.idC}>{c.courseName}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
               </div>
             )}

@@ -18,7 +18,7 @@ export default function NotificationsPage() {
     if (!userName) return;
     setLoading(true);
     try {
-      const res = await apiClient.get(`/api/notification/user/${userName}`);
+      const res = await apiClient.get(`/notification/user/${userName}`);
       setNotifications(res.data);
     } catch (err) {
       console.error("Error cargando notificaciones", err);
@@ -33,7 +33,7 @@ export default function NotificationsPage() {
 
   const markAllAsRead = async () => {
     try {
-      await apiClient.put(`/api/notification/mark-read/${userName}`);
+      await apiClient.put(`/notification/mark-read/${userName}`);
       fetchNotifications();
     } catch (err) {
       alert("Error al marcar notificaciones.");
@@ -42,7 +42,7 @@ export default function NotificationsPage() {
 
   const markAsRead = async (id: number) => {
     try {
-      await apiClient.put(`/api/notification/mark-one-read/${id}`);
+      await apiClient.put(`/notification/mark-one-read/${id}`);
       setNotifications(notifications.map(n => n.id === id ? { ...n, isRead: true } : n));
     } catch (err) {
       console.error(err);
@@ -52,7 +52,7 @@ export default function NotificationsPage() {
   const handleCreateNotification = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await apiClient.post('/api/notification/create', {
+      await apiClient.post('/notification/create', {
         senderUserName: userName,
         targetRoles: [newTarget],
         title: newTitle,

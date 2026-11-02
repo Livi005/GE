@@ -36,12 +36,12 @@ export default function ReservePage() {
       };
       
       const res = await apiClient.post('/classroommeans/reserveClassRoomAndMeans', payload);
-      
-      if (res.data.isSuccess || res.data.success) {
+      if (res.success) {
+
         setSuccess(true);
         setTimeout(() => { setSuccess(false); setStep(1); setSelectedSubject(''); }, 3000);
       } else {
-        alert("El aula ya está ocupada o hubo un error: " + (res.data.error?.message || "Intenta con otra."));
+            alert("El aula ya está ocupada o hubo un error.");
       }
     } catch (error: any) {
       console.error(error.response?.data || error);

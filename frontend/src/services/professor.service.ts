@@ -1,6 +1,6 @@
 import { apiClient } from '../api/client';
 
-export interface Professor {
+export interface ProfessorResponse {
   id: number;
   professor: {
     nameProf: string;
@@ -10,20 +10,35 @@ export interface Professor {
     isDean: boolean;
     laboralExperience: number;
     useAuxMean: boolean;
+    idInstitution: number;
   };
 }
 
 export const ProfessorService = {
-  getAll: async (): Promise<Professor[]> => {
+  getAll: async (): Promise<ProfessorResponse[]> => {
     try {
       const res = await apiClient.get('/professor/list');
       return res.data?.value || res.data || [];
-    } catch (error) {
-      console.error("Error cargando profesores", error);
-      return [];
+    } catch (error: any) {
+      console.error("Error cargando profesores:", error.response?.data?.detail || error.message);
+      throw error; // Importante para que la UI muestre el error
     }
   },
-  create: async (data: any) => (await apiClient.post('/professor/create', data)).data,
-  update: async (id: number, data: any) => (await apiClient.put(`/professor/update/${id}`, data)).data,
-  delete: async (id: number) => (await apiClient.delete(`/professor/delete/${id}`)).data
+  create: async (data: any) => {
+    const res = await apiClient.post('/professor/create', data);
+    return res.data;
+  },
+  update: async (id: number, data: any) => {
+    const res = await apiClient.put(`/professor/update/${id}`, data);
+    return res.data;
+  },
+  delete: async (id: number) => {
+    try {
+      const res = await apiClient.delete(`/professor/delete/${id}`);
+      if (res.status === 204) return true;
+    } catch (error: any) {
+      console.error("Error eliminando profesor:", error.response?.data?.detail || error.message);
+      throw error;
+    }
+  }
 };

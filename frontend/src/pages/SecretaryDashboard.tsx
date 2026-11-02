@@ -11,7 +11,7 @@ export default function SecretaryDashboard() {
   useEffect(() => {
     const fetchDashboard = async () => {
       try {
-        const res = await apiClient.get('/api/dashboard/secretary');
+        const res = await apiClient.get('/dashboard/secretary');
         setData(res.data);
       } catch (err) {
         console.error("Error cargando dashboard", err);

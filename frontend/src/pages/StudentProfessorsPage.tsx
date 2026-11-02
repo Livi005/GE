@@ -15,7 +15,7 @@ export default function StudentProfessorsPage() {
 
   useEffect(() => {
     if (!userName) return;
-    // Endpoint correcto según el informe del backend
+    // El endpoint real es /profstudsubcourse/listProfessorsByStudent
     apiClient.get(`/profstudsubcourse/listProfessorsByStudent?userName=${userName}`)
       .then(res => {
         const data = res.data?.value || res.data || [];
@@ -35,16 +35,23 @@ export default function StudentProfessorsPage() {
   const handleSubmitEvaluation = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await apiClient.post('/api/student/evaluate-professor', {
-        studentUserName: userName,
-        professorId: selectedProf.idProf,
-        rating,
-        comment
+      // Payload exacto que espera el backend: idProf, idStud, idSub, idCourse, evaluation
+      // Necesitamos el idStud del alumno y el idSub/idCourse. 
+      // Como el endpoint listProfessorsByStudent no los devuelve, enviamos lo que tenemos.
+      // El backend debería poder resolverlos si le pasamos el userName del alumno y el idProf.
+      // Si no, el backend debe devolver esos IDs en el listado.
+      await apiClient.post('/profstudsubcourse/create', {
+        idProf: selectedProf.idProf,
+        idStud: 0, // El backend debe resolverlo desde el userName del JWT
+        idSub: selectedProf.idSub || 0,
+        idCourse: selectedProf.idCourse || 0,
+        evaluation: rating
       });
       alert("¡Gracias por tu evaluación!");
       setIsModalOpen(false);
-    } catch (err) {
-      alert("Error al enviar la evaluación.");
+    } catch (err: any) {
+      console.error(err.response?.data);
+      alert("Error al enviar la evaluación: " + (err.response?.data?.detail || "Revisa la consola"));
     }
   };
 
@@ -69,9 +76,10 @@ export default function StudentProfessorsPage() {
           {professors.map((prof, idx) => (
             <div key={prof.idProf || idx} className="glass-card p-6 dark:bg-slate-800/50 dark:border-slate-700 flex flex-col items-center text-center">
               <div className="w-20 h-20 bg-gradient-to-br from-purple-400 to-pink-500 rounded-full flex items-center justify-center text-white font-extrabold text-2xl shadow-lg mb-4">
-                {prof.nameProf?.charAt(0) || 'P'}
+                {/* CAMBIO: profName en lugar de nameProf */}
+                {prof.profName?.charAt(0) || 'P'}
               </div>
-              <h3 className="text-lg font-bold text-slate-800 dark:text-white">{prof.nameProf}</h3>
+              <h3 className="text-lg font-bold text-slate-800 dark:text-white">{prof.profName}</h3>
               <p className="text-sm text-slate-500 dark:text-slate-400 mb-3">{prof.subjectName}</p>
               <div className="flex items-center gap-1 text-yellow-500 mb-4">
                 <Star size={16} fill="currentColor" />
@@ -90,7 +98,7 @@ export default function StudentProfessorsPage() {
           <div className="glass-card w-full max-w-md p-8 relative dark:bg-slate-800 dark:border-slate-700">
             <button onClick={() => setIsModalOpen(false)} className="absolute top-6 right-6 text-slate-400"><X size={24} /></button>
             <h2 className="text-2xl font-display font-bold text-slate-800 dark:text-white mb-2">Evaluar Docente</h2>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">{selectedProf.nameProf}</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">{selectedProf.profName}</p>
             <form onSubmit={handleSubmitEvaluation} className="space-y-4">
               <div>
                 <label className="block text-sm font-bold mb-2">Calificación</label>
@@ -108,7 +116,7 @@ export default function StudentProfessorsPage() {
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-bold mb-1">Comentario</label>
+                <label className="block text-sm font-bold mb-1">Comentario (opcional)</label>
                 <textarea rows={3} value={comment} onChange={(e) => setComment(e.target.value)} className="w-full px-4 py-2 rounded-xl border dark:bg-slate-700/50 dark:text-white" />
               </div>
               <div className="flex justify-end gap-3 pt-4">

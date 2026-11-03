@@ -435,7 +435,7 @@ public class ContextInitializer
                 BirthDate = new DateTime(2010, (i % 12) + 1, (i % 28) + 1),
                 Gender = i % 2 == 0 ? "Masculino" : "Femenino",
                 DocType = "DNI",
-                DocNumber = $"{(10000000 + i):D8}",
+                DocNumber = $"DNI{Guid.NewGuid():N}".Substring(0, 12),
                 Email = $"{userName}@lyra.local",
                 Phone = $"+53 5555-{i:D4}",
                 Address = $"Calle {i + 1}, Ciudad",

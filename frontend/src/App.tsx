@@ -21,10 +21,12 @@ import NotificationsPage from './pages/NotificationsPage';
 import StudentGradesPage from './pages/StudentGradesPage';
 import StudentSchedulePage from './pages/StudentSchedulePage';
 import StudentProfessorsPage from './pages/StudentProfessorsPage';
-import ProfessorSchedulePage from './pages/ProfessorSchedulePage'; // NUEVO
+import ProfessorSchedulePage from './pages/ProfessorSchedulePage';
+import FacultyReportsPage from './pages/FacultyReportsPage'; // Ruta de Reportes
+import ReservePage from './pages/ReservePage'; // Ruta de Reservas
+
+// CORRECCIÓN AQUÍ: Ruta relativa "./store/authStore" en lugar de "../store/authStore"
 import { useAuthStore } from './store/authStore';
-import ReservePage from './pages/ReservePage';
-import FacultyReportsPage from './pages/FacultyReportsPage';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const token = useAuthStore((state) => state.token);
@@ -66,11 +68,10 @@ function App() {
         <Route path="/my-schedule" element={<ProtectedRoute><AppLayout><StudentSchedulePage /></AppLayout></ProtectedRoute>} />
         <Route path="/my-professors" element={<ProtectedRoute><AppLayout><StudentProfessorsPage /></AppLayout></ProtectedRoute>} />
 
-        {/* PROFESOR */}
+        {/* PROFESOR Y DECANO */}
         <Route path="/prof-schedule" element={<ProtectedRoute><AppLayout><ProfessorSchedulePage /></AppLayout></ProtectedRoute>} /> 
+        <Route path="/faculty-reports" element={<ProtectedRoute><AppLayout><FacultyReportsPage /></AppLayout></ProtectedRoute>} />
         <Route path="/reserve" element={<ProtectedRoute><AppLayout><ReservePage /></AppLayout></ProtectedRoute>} />
-        <Route path="/faculty-reports" element={<ProtectedRoute><AppLayout><FacultyReportsPage /></AppLayout></ProtectedRoute>} />  
-        
         
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>

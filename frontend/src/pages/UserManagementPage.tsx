@@ -120,8 +120,14 @@ export default function UserManagementPage() {
                 <div>
                   <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1">Rol</label>
                   <select value={formData.role} onChange={(e) => setFormData({...formData, role: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-white/60 dark:border-slate-600 bg-white/50 dark:bg-slate-700/50 dark:text-white">
-                    <option value="Admin">Gestor de Recursos</option>
                     <option value="Secretary">Secretaría</option>
+                    <option value="SuperAdmin">SuperAdmin</option>
+                    <option value="Director">Director</option>
+                    <option value="Maintenance">Gestor de Recursos</option>
+                    <option value="Secretary">Secretaría</option>
+                    <option value="Professor">Docente</option>
+                    <option value="Student">Estudiante</option>
+                    <option value="YearHead">Jefe de Año</option>
                   </select>
                 </div>
                 <div>

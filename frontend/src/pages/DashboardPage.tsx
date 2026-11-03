@@ -3,8 +3,8 @@ import AdminDashboard from './AdminDashboard';
 import SecretaryDashboard from './SecretaryDashboard';
 import ProfessorDashboard from './ProfessorDashboard';
 import StudentDashboard from './StudentDashboard';
-import MaintenanceDashboard from './MaintenanceDashboard'; // NUEVO
-import YearHeadDashboard from './YearHeadDashboard'; // NUEVO
+import MaintenanceDashboard from './MaintenanceDashboard';
+import YearHeadDashboard from './YearHeadDashboard'; 
 import LoadingState from '../components/LoadingState';
 
 export default function DashboardPage() {
@@ -15,8 +15,8 @@ export default function DashboardPage() {
     'Secretary': <SecretaryDashboard />,
     'Professor': <ProfessorDashboard />,
     'Student': <StudentDashboard />,
-    'Maintenance': <MaintenanceDashboard />, // NUEVO
-    'YearHead': <YearHeadDashboard />, // NUEVO
+    'Maintenance': <MaintenanceDashboard />, 
+    'YearHead': <YearHeadDashboard />, 
   };
 
   return dashboards[role || ''] || <LoadingState message="Cargando..." />;

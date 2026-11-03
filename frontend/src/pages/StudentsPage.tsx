@@ -15,10 +15,8 @@ export default function StudentsPage() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   
-  // Estados para el modal de Ver
   const [selectedStudent, setSelectedStudent] = useState<any>(null);
 
-  // Estados para el modal de Editar
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState<any>(null);
   const [editFormData, setEditFormData] = useState({
@@ -48,7 +46,7 @@ export default function StudentsPage() {
         await StudentService.delete(id);
         loadStudents();
       } catch (err: any) {
-        alert(err.response?.data?.detail || "Error al eliminar estudiante. Revisa la consola.");
+        alert(err.response?.data?.detail || "Error al eliminar estudiante.");
       }
     }
   };
@@ -83,7 +81,8 @@ export default function StudentsPage() {
         section: editFormData.section,
         docType: editFormData.docType,
         docNumber: editFormData.docNumber,
-        isActive: editFormData.isActive
+        isActive: editFormData.isActive,
+        idC: editingStudent.idC 
       };
       await StudentService.update(editingStudent.id, payload);
       setIsEditModalOpen(false);
@@ -104,19 +103,24 @@ export default function StudentsPage() {
     exportToCsv('estudiantes', dataToExport);
   };
 
-  const filtered = students.filter(s => {
-    const name = s.student?.name1 || '';
-    const lastName = s.student?.lastName1 || '';
-    const doc = s.student?.docNumber || '';
-    return `${name} ${lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) || doc.includes(searchTerm);
-  });
+  const filtered = students
+    .filter(s => {
+      const name = s.student?.name1 || '';
+      const lastName = s.student?.lastName1 || '';
+      const doc = s.student?.docNumber || '';
+      return `${name} ${lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) || doc.includes(searchTerm);
+    })
+    .sort((a, b) => {
+      const nameA = a.student?.name1 || '';
+      const nameB = b.student?.name1 || '';
+      return nameA.localeCompare(nameB);
+    });
   
   const totalPages = Math.ceil(filtered.length / itemsPerPage);
   const currentData = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   if (loading) return <LoadingState message="Cargando estudiantes..." />;
 
-  // Verificamos si el usuario tiene permisos de edición
   const canEdit = role === 'Director' || role === 'Secretary' || role === 'SuperAdmin';
 
   return (
@@ -131,7 +135,6 @@ export default function StudentsPage() {
             <Download size={18} /> Exportar
           </button>
           
-          {/* Solo Director y Secretaría pueden crear */}
           {canEdit && (
             <button onClick={() => navigate('/students/create')} className="btn-lyra px-6 py-3 flex items-center gap-2">
               <Plus size={20} /> Nuevo Estudiante
@@ -155,38 +158,37 @@ export default function StudentsPage() {
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-slate-300 text-sm">
-                <th className="py-4 px-4 font-bold text-slate-800">Estudiante</th>
-                <th className="py-4 px-4 font-bold text-slate-800">Curso</th>
-                <th className="py-4 px-4 font-bold text-slate-800">Documento</th>
-                <th className="py-4 px-4 font-bold text-slate-800">Estado</th>
-                <th className="py-4 px-4 font-bold text-slate-800 text-right">Acciones</th>
+              <tr className="border-b border-slate-200 dark:border-slate-700 text-sm">
+                <th className="py-4 px-4 font-bold text-slate-700 dark:text-slate-300">Estudiante</th>
+                <th className="py-4 px-4 font-bold text-slate-700 dark:text-slate-300">Curso</th>
+                <th className="py-4 px-4 font-bold text-slate-700 dark:text-slate-300">Documento</th>
+                <th className="py-4 px-4 font-bold text-slate-700 dark:text-slate-300">Estado</th>
+                <th className="py-4 px-4 font-bold text-slate-700 dark:text-slate-300 text-right">Acciones</th>
               </tr>
             </thead>
             <tbody>
               {currentData.map((s: any) => (
-                <tr key={s.id} className="border-b border-slate-200 hover:bg-white/60 transition-colors">
-                  <td className="py-4 px-4 font-bold text-slate-900 flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-xs border border-blue-200">
+                <tr key={s.id} className="border-b border-slate-100 dark:border-slate-700 hover:bg-white/40 dark:hover:bg-slate-700/50 transition-colors">
+                  <td className="py-4 px-4 font-medium text-slate-800 dark:text-white flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 dark:bg-blue-900/50 dark:text-blue-400 flex items-center justify-center font-bold text-xs">
                       {s.student?.name1?.charAt(0) || '?'}
                     </div>
                     {s.student?.name1} {s.student?.lastName1}
                   </td>
-                  <td className="py-4 px-4 text-slate-800 font-semibold">{s.student?.grade} {s.student?.section}</td>
-                  <td className="py-4 px-4 text-slate-800 font-semibold">{s.student?.docType}: {s.student?.docNumber}</td>
+                  <td className="py-4 px-4 text-slate-600 dark:text-slate-300">{s.student?.grade} {s.student?.section}</td>
+                  <td className="py-4 px-4 text-slate-600 dark:text-slate-300">{s.student?.docType}: {s.student?.docNumber}</td>
                   <td className="py-4 px-4">
-                    <span className={`px-3 py-1 rounded-full text-xs font-bold ${s.student?.isActive ? 'bg-green-100 text-green-800 border border-green-200' : 'bg-red-100 text-red-800 border border-red-200'}`}>
+                    <span className={`px-3 py-1 rounded-full text-xs font-bold ${s.student?.isActive ? 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-400'}`}>
                       {s.student?.isActive ? 'Activo' : 'Inactivo'}
                     </span>
                   </td>
                   <td className="py-4 px-4 text-right flex justify-end gap-2">
-                    <button onClick={() => setSelectedStudent(s)} className="p-2 text-slate-600 hover:text-blue-600 bg-white/50 hover:bg-blue-100 rounded-lg transition-colors border border-transparent hover:border-blue-200"><Eye size={18} /></button>
+                    <button onClick={() => setSelectedStudent(s)} className="p-2 text-slate-400 hover:text-blue-500 rounded-lg transition-colors"><Eye size={18} /></button>
                     
-                    {/* Solo Director y Secretaría pueden editar/eliminar */}
                     {canEdit && (
                       <>
-                        <button onClick={() => handleOpenEditModal(s)} className="p-2 text-blue-600 bg-white/50 hover:bg-blue-100 rounded-lg transition-colors border border-transparent hover:border-blue-200"><Edit2 size={18} /></button>
-                        <button onClick={() => handleDelete(s.id)} className="p-2 text-red-600 bg-white/50 hover:bg-red-100 rounded-lg transition-colors border border-transparent hover:border-red-200"><Trash2 size={18} /></button>
+                        <button onClick={() => handleOpenEditModal(s)} className="p-2 text-blue-500 hover:bg-blue-50 dark:hover:bg-slate-700 rounded-lg transition-colors"><Edit2 size={18} /></button>
+                        <button onClick={() => handleDelete(s.id)} className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-slate-700 rounded-lg transition-colors"><Trash2 size={18} /></button>
                       </>
                     )}
                   </td>
@@ -202,7 +204,7 @@ export default function StudentsPage() {
       {/* Modal de Ver Estudiante */}
       {selectedStudent && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
-          <div className="glass-card w-full max-w-md p-8 relative dark:bg-slate-800 dark:border-slate-700">
+          <div className="glass-card w-full max-w-md p-8 relative bg-white/90 dark:bg-slate-800 dark:border-slate-700">
             <button onClick={() => setSelectedStudent(null)} className="absolute top-6 right-6 text-slate-500 hover:text-slate-800"><X size={24} /></button>
             <h2 className="text-2xl font-display font-bold mb-6 text-slate-900 dark:text-white">Detalle del Estudiante</h2>
             <div className="space-y-3 text-sm">
@@ -220,7 +222,7 @@ export default function StudentsPage() {
       {/* Modal de Editar Estudiante */}
       {isEditModalOpen && editingStudent && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
-          <div className="glass-card w-full max-w-md p-8 relative dark:bg-slate-800 dark:border-slate-700">
+          <div className="glass-card w-full max-w-md p-8 relative bg-white/90 dark:bg-slate-800 dark:border-slate-700">
             <button onClick={() => setIsEditModalOpen(false)} className="absolute top-6 right-6 text-slate-500 hover:text-slate-800"><X size={24} /></button>
             <h2 className="text-2xl font-display font-bold mb-6 text-slate-900 dark:text-white">Editar Estudiante</h2>
             <form onSubmit={handleSaveEdit} className="space-y-4">

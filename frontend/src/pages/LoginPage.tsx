@@ -30,7 +30,7 @@ export default function LoginPage() {
       
       if (token && role) {
         // Guardamos el theme que viene del backend (o 'light' por defecto)
-        login(token, role, resUserName || userName.trim(), isDean || false, institutionId || null, resTheme || 'light'); 
+        login(token, role, resUserName || userName.trim(), isDean || false, institutionId || null); 
         
         if (role === 'SuperAdmin') {
           navigate('/superadmin');

@@ -75,3 +75,11 @@ input, select, textarea {
 .dark input, .dark select, .dark textarea {
   @apply text-white bg-slate-800 border-slate-600 placeholder-slate-400;
 }
+
+/* Arreglar tabla de estudiantes en modo oscuro */
+.dark table tbody tr {
+  @apply bg-slate-800/40 hover:bg-slate-700/60 border-slate-600;
+}
+.dark table td {
+  @apply text-slate-100 font-medium;
+}

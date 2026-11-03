@@ -78,6 +78,7 @@ export default function ReservePage() {
       }, 3000);
       
     } catch (error: any) {
+      // En lugar de alert, usamos el estado
       setErrorMsg("Error al reservar: " + (error.response?.data?.detail || "El aula o medio ya está ocupado."));
     }
   };

@@ -185,7 +185,10 @@ public class Context : IdentityDbContext<User>
             e.Property(x => x.EmergencyContact).HasMaxLength(128);
             e.Property(x => x.IsActive).HasDefaultValue(true);
 
-            e.HasIndex(x => new { x.IdInstitution, x.DocNumber }).IsUnique();
+
+            
+            e.HasIndex(x => new { x.IdInstitution, x.DocNumber });
+
 
             e.HasOne(s => s.Course).WithMany(c => c.Students)
                 .HasForeignKey(s => s.IdC).OnDelete(DeleteBehavior.Restrict);

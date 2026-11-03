@@ -1,0 +1,12 @@
+# Archivos generados y configuración local
+**/node_modules/
+**/bin/
+**/obj/
+**/TestResults/
+**/coverage/
+**/playwright-report/
+**/test-results/
+**/*.tsbuildinfo
+**/.env
+**/.env.local
+**/dist/

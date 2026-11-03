@@ -9,4 +9,7 @@ public interface IReservationService
         string userName, CancellationToken cancellationToken = default);
 
     Task<Result> CancelAsync(int id, CancellationToken cancellationToken = default);
-}
+
+    Task<Result<AvailableReservationDto>> GetAvailableResourcesAsync(
+        CancellationToken cancellationToken = default);
+} 

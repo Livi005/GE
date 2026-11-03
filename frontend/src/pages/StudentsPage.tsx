@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { StudentService, StudentResponse } from '../services/student.service';
+import { useAuthStore } from '../store/authStore';
 import { Search, Plus, Edit2, Trash2, Download, Eye, X } from 'lucide-react';
 import Pagination from '../components/Pagination';
 import { exportToCsv } from '../utils/exportToCsv';
@@ -8,6 +9,8 @@ import LoadingState from '../components/LoadingState';
 
 export default function StudentsPage() {
   const navigate = useNavigate();
+  const { role } = useAuthStore();
+  
   const [students, setStudents] = useState<StudentResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -113,66 +116,79 @@ export default function StudentsPage() {
 
   if (loading) return <LoadingState message="Cargando estudiantes..." />;
 
+  // Verificamos si el usuario tiene permisos de edición
+  const canEdit = role === 'Director' || role === 'Secretary' || role === 'SuperAdmin';
+
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-display font-bold text-slate-800 dark:text-white">Estudiantes</h1>
-          <p className="text-slate-500 dark:text-slate-400">Gestiona la lista de alumnos del centro.</p>
+          <h1 className="text-3xl font-display font-bold text-slate-900 dark:text-white">Estudiantes</h1>
+          <p className="text-slate-700 dark:text-slate-400 font-medium">Gestiona la lista de alumnos del centro.</p>
         </div>
         <div className="flex gap-3">
-          <button onClick={handleExport} className="px-4 py-3 bg-white/50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl flex items-center gap-2 text-slate-700 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700 transition-colors font-semibold">
+          <button onClick={handleExport} className="px-4 py-3 bg-white/80 border border-slate-300 rounded-xl flex items-center gap-2 text-slate-800 hover:bg-white transition-colors font-bold shadow-sm">
             <Download size={18} /> Exportar
           </button>
-          <button onClick={() => navigate('/students/create')} className="btn-lyra px-6 py-3 flex items-center gap-2">
-            <Plus size={20} /> Nuevo Estudiante
-          </button>
+          
+          {/* Solo Director y Secretaría pueden crear */}
+          {canEdit && (
+            <button onClick={() => navigate('/students/create')} className="btn-lyra px-6 py-3 flex items-center gap-2">
+              <Plus size={20} /> Nuevo Estudiante
+            </button>
+          )}
         </div>
       </div>
 
       <div className="glass-card p-6">
         <div className="relative w-full max-w-md mb-6">
-          <Search className="absolute left-4 top-3 text-slate-400" size={20} />
+          <Search className="absolute left-4 top-3 text-slate-500" size={20} />
           <input 
             type="text" 
             placeholder="Buscar por nombre o documento..." 
             value={searchTerm} 
             onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }} 
-            className="w-full bg-white/60 dark:bg-slate-700/50 border border-white/50 dark:border-slate-600 rounded-xl pl-12 pr-4 py-3 focus:outline-none focus:ring-2 focus:ring-purple-500 dark:text-white" 
+            className="w-full bg-white/80 border border-slate-300 rounded-xl pl-12 pr-4 py-3 focus:outline-none focus:ring-2 focus:ring-purple-500 text-slate-900 font-medium shadow-sm" 
           />
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-slate-200 dark:border-slate-700 text-sm text-slate-500 dark:text-slate-400">
-                <th className="py-4 px-4 font-semibold">Estudiante</th>
-                <th className="py-4 px-4 font-semibold">Curso</th>
-                <th className="py-4 px-4 font-semibold">Documento</th>
-                <th className="py-4 px-4 font-semibold">Estado</th>
-                <th className="py-4 px-4 font-semibold text-right">Acciones</th>
+              <tr className="border-b border-slate-300 text-sm">
+                <th className="py-4 px-4 font-bold text-slate-800">Estudiante</th>
+                <th className="py-4 px-4 font-bold text-slate-800">Curso</th>
+                <th className="py-4 px-4 font-bold text-slate-800">Documento</th>
+                <th className="py-4 px-4 font-bold text-slate-800">Estado</th>
+                <th className="py-4 px-4 font-bold text-slate-800 text-right">Acciones</th>
               </tr>
             </thead>
             <tbody>
               {currentData.map((s: any) => (
-                <tr key={s.id} className="border-b border-slate-100 dark:border-slate-700 hover:bg-white/40 dark:hover:bg-slate-700/50 transition-colors">
-                  <td className="py-4 px-4 font-medium text-slate-800 dark:text-white flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-xs">
+                <tr key={s.id} className="border-b border-slate-200 hover:bg-white/60 transition-colors">
+                  <td className="py-4 px-4 font-bold text-slate-900 flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-xs border border-blue-200">
                       {s.student?.name1?.charAt(0) || '?'}
                     </div>
                     {s.student?.name1} {s.student?.lastName1}
                   </td>
-                  <td className="py-4 px-4 text-slate-600 dark:text-slate-300">{s.student?.grade} {s.student?.section}</td>
-                  <td className="py-4 px-4 text-slate-600 dark:text-slate-300">{s.student?.docType}: {s.student?.docNumber}</td>
+                  <td className="py-4 px-4 text-slate-800 font-semibold">{s.student?.grade} {s.student?.section}</td>
+                  <td className="py-4 px-4 text-slate-800 font-semibold">{s.student?.docType}: {s.student?.docNumber}</td>
                   <td className="py-4 px-4">
-                    <span className={`px-3 py-1 rounded-full text-xs font-bold ${s.student?.isActive ? 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-400'}`}>
+                    <span className={`px-3 py-1 rounded-full text-xs font-bold ${s.student?.isActive ? 'bg-green-100 text-green-800 border border-green-200' : 'bg-red-100 text-red-800 border border-red-200'}`}>
                       {s.student?.isActive ? 'Activo' : 'Inactivo'}
                     </span>
                   </td>
                   <td className="py-4 px-4 text-right flex justify-end gap-2">
-                    <button onClick={() => setSelectedStudent(s)} className="p-2 text-slate-400 hover:text-blue-500 rounded-lg transition-colors"><Eye size={18} /></button>
-                    <button onClick={() => handleOpenEditModal(s)} className="p-2 text-blue-500 hover:bg-blue-50 dark:hover:bg-slate-700 rounded-lg transition-colors"><Edit2 size={18} /></button>
-                    <button onClick={() => handleDelete(s.id)} className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-slate-700 rounded-lg transition-colors"><Trash2 size={18} /></button>
+                    <button onClick={() => setSelectedStudent(s)} className="p-2 text-slate-600 hover:text-blue-600 bg-white/50 hover:bg-blue-100 rounded-lg transition-colors border border-transparent hover:border-blue-200"><Eye size={18} /></button>
+                    
+                    {/* Solo Director y Secretaría pueden editar/eliminar */}
+                    {canEdit && (
+                      <>
+                        <button onClick={() => handleOpenEditModal(s)} className="p-2 text-blue-600 bg-white/50 hover:bg-blue-100 rounded-lg transition-colors border border-transparent hover:border-blue-200"><Edit2 size={18} /></button>
+                        <button onClick={() => handleDelete(s.id)} className="p-2 text-red-600 bg-white/50 hover:bg-red-100 rounded-lg transition-colors border border-transparent hover:border-red-200"><Trash2 size={18} /></button>
+                      </>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -187,15 +203,15 @@ export default function StudentsPage() {
       {selectedStudent && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
           <div className="glass-card w-full max-w-md p-8 relative dark:bg-slate-800 dark:border-slate-700">
-            <button onClick={() => setSelectedStudent(null)} className="absolute top-6 right-6 text-slate-400"><X size={24} /></button>
-            <h2 className="text-2xl font-display font-bold mb-6 dark:text-white">Detalle del Estudiante</h2>
+            <button onClick={() => setSelectedStudent(null)} className="absolute top-6 right-6 text-slate-500 hover:text-slate-800"><X size={24} /></button>
+            <h2 className="text-2xl font-display font-bold mb-6 text-slate-900 dark:text-white">Detalle del Estudiante</h2>
             <div className="space-y-3 text-sm">
-              <p className="flex justify-between"><span className="text-slate-500">Nombre:</span> <span className="font-bold dark:text-white">{selectedStudent.student?.name1} {selectedStudent.student?.lastName1}</span></p>
-              <p className="flex justify-between"><span className="text-slate-500">Documento:</span> <span className="font-bold dark:text-white">{selectedStudent.student?.docType} {selectedStudent.student?.docNumber}</span></p>
-              <p className="flex justify-between"><span className="text-slate-500">Email:</span> <span className="font-bold dark:text-white">{selectedStudent.student?.email}</span></p>
-              <p className="flex justify-between"><span className="text-slate-500">Teléfono:</span> <span className="font-bold dark:text-white">{selectedStudent.student?.phone}</span></p>
-              <p className="flex justify-between"><span className="text-slate-500">Tutor:</span> <span className="font-bold dark:text-white">{selectedStudent.student?.tutorName}</span></p>
-              <p className="flex justify-between"><span className="text-slate-500">Curso:</span> <span className="font-bold dark:text-white">{selectedStudent.student?.grade} {selectedStudent.student?.section}</span></p>
+              <p className="flex justify-between border-b border-slate-200 pb-2"><span className="text-slate-600 font-semibold">Nombre:</span> <span className="font-bold text-slate-900 dark:text-white">{selectedStudent.student?.name1} {selectedStudent.student?.lastName1}</span></p>
+              <p className="flex justify-between border-b border-slate-200 pb-2"><span className="text-slate-600 font-semibold">Documento:</span> <span className="font-bold text-slate-900 dark:text-white">{selectedStudent.student?.docType} {selectedStudent.student?.docNumber}</span></p>
+              <p className="flex justify-between border-b border-slate-200 pb-2"><span className="text-slate-600 font-semibold">Email:</span> <span className="font-bold text-slate-900 dark:text-white">{selectedStudent.student?.email}</span></p>
+              <p className="flex justify-between border-b border-slate-200 pb-2"><span className="text-slate-600 font-semibold">Teléfono:</span> <span className="font-bold text-slate-900 dark:text-white">{selectedStudent.student?.phone}</span></p>
+              <p className="flex justify-between border-b border-slate-200 pb-2"><span className="text-slate-600 font-semibold">Tutor:</span> <span className="font-bold text-slate-900 dark:text-white">{selectedStudent.student?.tutorName}</span></p>
+              <p className="flex justify-between"><span className="text-slate-600 font-semibold">Curso:</span> <span className="font-bold text-slate-900 dark:text-white">{selectedStudent.student?.grade} {selectedStudent.student?.section}</span></p>
             </div>
           </div>
         </div>
@@ -205,25 +221,25 @@ export default function StudentsPage() {
       {isEditModalOpen && editingStudent && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
           <div className="glass-card w-full max-w-md p-8 relative dark:bg-slate-800 dark:border-slate-700">
-            <button onClick={() => setIsEditModalOpen(false)} className="absolute top-6 right-6 text-slate-400"><X size={24} /></button>
-            <h2 className="text-2xl font-display font-bold mb-6 dark:text-white">Editar Estudiante</h2>
+            <button onClick={() => setIsEditModalOpen(false)} className="absolute top-6 right-6 text-slate-500 hover:text-slate-800"><X size={24} /></button>
+            <h2 className="text-2xl font-display font-bold mb-6 text-slate-900 dark:text-white">Editar Estudiante</h2>
             <form onSubmit={handleSaveEdit} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
-                <div><label className="block text-sm font-bold mb-1 dark:text-slate-300">Nombres</label><input type="text" required value={editFormData.name1} onChange={(e) => setEditFormData({...editFormData, name1: e.target.value})} className="w-full px-4 py-2 rounded-xl border dark:bg-slate-700/50 dark:text-white dark:border-slate-600" /></div>
-                <div><label className="block text-sm font-bold mb-1 dark:text-slate-300">Apellidos</label><input type="text" required value={editFormData.lastName1} onChange={(e) => setEditFormData({...editFormData, lastName1: e.target.value})} className="w-full px-4 py-2 rounded-xl border dark:bg-slate-700/50 dark:text-white dark:border-slate-600" /></div>
+                <div><label className="block text-sm font-bold mb-1 text-slate-700 dark:text-slate-300">Nombres</label><input type="text" required value={editFormData.name1} onChange={(e) => setEditFormData({...editFormData, name1: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-300 bg-white text-slate-900 font-medium" /></div>
+                <div><label className="block text-sm font-bold mb-1 text-slate-700 dark:text-slate-300">Apellidos</label><input type="text" required value={editFormData.lastName1} onChange={(e) => setEditFormData({...editFormData, lastName1: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-300 bg-white text-slate-900 font-medium" /></div>
               </div>
-              <div><label className="block text-sm font-bold mb-1 dark:text-slate-300">Email</label><input type="email" required value={editFormData.email} onChange={(e) => setEditFormData({...editFormData, email: e.target.value})} className="w-full px-4 py-2 rounded-xl border dark:bg-slate-700/50 dark:text-white dark:border-slate-600" /></div>
-              <div><label className="block text-sm font-bold mb-1 dark:text-slate-300">Teléfono</label><input type="text" required value={editFormData.phone} onChange={(e) => setEditFormData({...editFormData, phone: e.target.value})} className="w-full px-4 py-2 rounded-xl border dark:bg-slate-700/50 dark:text-white dark:border-slate-600" /></div>
+              <div><label className="block text-sm font-bold mb-1 text-slate-700 dark:text-slate-300">Email</label><input type="email" required value={editFormData.email} onChange={(e) => setEditFormData({...editFormData, email: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-300 bg-white text-slate-900 font-medium" /></div>
+              <div><label className="block text-sm font-bold mb-1 text-slate-700 dark:text-slate-300">Teléfono</label><input type="text" required value={editFormData.phone} onChange={(e) => setEditFormData({...editFormData, phone: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-300 bg-white text-slate-900 font-medium" /></div>
               <div className="grid grid-cols-2 gap-4">
-                <div><label className="block text-sm font-bold mb-1 dark:text-slate-300">Grado</label><input type="text" required value={editFormData.grade} onChange={(e) => setEditFormData({...editFormData, grade: e.target.value})} className="w-full px-4 py-2 rounded-xl border dark:bg-slate-700/50 dark:text-white dark:border-slate-600" /></div>
-                <div><label className="block text-sm font-bold mb-1 dark:text-slate-300">Sección</label><input type="text" required value={editFormData.section} onChange={(e) => setEditFormData({...editFormData, section: e.target.value})} className="w-full px-4 py-2 rounded-xl border dark:bg-slate-700/50 dark:text-white dark:border-slate-600" /></div>
+                <div><label className="block text-sm font-bold mb-1 text-slate-700 dark:text-slate-300">Grado</label><input type="text" required value={editFormData.grade} onChange={(e) => setEditFormData({...editFormData, grade: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-300 bg-white text-slate-900 font-medium" /></div>
+                <div><label className="block text-sm font-bold mb-1 text-slate-700 dark:text-slate-300">Sección</label><input type="text" required value={editFormData.section} onChange={(e) => setEditFormData({...editFormData, section: e.target.value})} className="w-full px-4 py-2 rounded-xl border border-slate-300 bg-white text-slate-900 font-medium" /></div>
               </div>
               <div className="flex items-center gap-3 pt-2">
                 <input type="checkbox" checked={editFormData.isActive} onChange={(e) => setEditFormData({...editFormData, isActive: e.target.checked})} className="w-5 h-5 text-purple-600 rounded" />
-                <label className="text-sm font-medium dark:text-slate-300">¿Estudiante activo?</label>
+                <label className="text-sm font-bold text-slate-800 dark:text-slate-300">¿Estudiante activo?</label>
               </div>
               <div className="flex justify-end gap-3 pt-4">
-                <button type="button" onClick={() => setIsEditModalOpen(false)} className="px-6 py-2 rounded-xl text-slate-600 dark:text-slate-300 font-semibold hover:bg-white/50 dark:hover:bg-slate-700/50">Cancelar</button>
+                <button type="button" onClick={() => setIsEditModalOpen(false)} className="px-6 py-2 rounded-xl text-slate-700 font-bold bg-slate-200 hover:bg-slate-300 transition-colors">Cancelar</button>
                 <button type="submit" className="btn-lyra px-6 py-2">Guardar Cambios</button>
               </div>
             </form>

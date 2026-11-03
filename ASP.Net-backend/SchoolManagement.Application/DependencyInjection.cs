@@ -68,6 +68,8 @@ public static class DependencyInjection
         services.AddScoped<ISuperAdminService, SuperAdminService>();
         services.AddScoped<IUserPreferencesService, UserPreferencesService>();
 
+        services.AddScoped<IExplorerService, ExplorerService>();
+
         return services;
     }
 }

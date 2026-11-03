@@ -63,4 +63,45 @@ public class ReservationService : IReservationService
         await _unitOfWork.SaveChangesAsync(cancellationToken);
         return Result.Success();
     }
+
+    public async Task<Result<AvailableReservationDto>> GetAvailableResourcesAsync(
+        CancellationToken cancellationToken = default)
+    {
+        var classRooms = await _unitOfWork.Repository<ClassRoom>().Query()
+            .Where(c => c.IsAviable && !c.IsDeleted)
+            .Select(c => new AvailableClassRoomDto
+            {
+                IdClassR = c.IdClassR,
+                Location = c.Location,
+                Capacity = c.Capacity
+            })
+            .ToListAsync(cancellationToken);
+
+        var techMeans = await _unitOfWork.Repository<TechnologicalMeans>().Query()
+            .Where(t => t.IsAviable && !t.IsDeleted)
+            .Select(t => new AvailableMeanDto
+            {
+                IdMean = t.IdMean,
+                NameMean = t.NameMean,
+                Type = "Tech"
+            })
+            .ToListAsync(cancellationToken);
+
+        var auxMeans = await _unitOfWork.Repository<AuxiliaryMeans>().Query()
+            .Where(a => a.IsAviable && !a.IsDeleted)
+            .Select(a => new AvailableMeanDto
+            {
+                IdMean = a.IdMean,
+                NameMean = a.NameMean,
+                Type = a.Type
+            })
+            .ToListAsync(cancellationToken);
+
+        return Result.Success(new AvailableReservationDto
+        {
+            ClassRooms = classRooms,
+            TechMeans = techMeans,
+            AuxMeans = auxMeans
+        });
+    }
 }

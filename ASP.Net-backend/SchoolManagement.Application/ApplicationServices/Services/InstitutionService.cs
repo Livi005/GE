@@ -21,7 +21,11 @@ public class InstitutionService : IInstitutionService
             .OrderBy(i => i.Name)
             .ToListAsync(cancellationToken);
 
-        return Result.Success<IReadOnlyList<InstitutionDto>>(items.Select(MapToDto).ToList());
+        var dtos = new List<InstitutionDto>();
+        foreach (var i in items)
+            dtos.Add(await MapToDtoWithCountAsync(i, cancellationToken));
+
+        return Result.Success<IReadOnlyList<InstitutionDto>>(dtos);
     }
 
     public async Task<Result<InstitutionDto>> GetByIdAsync(
@@ -29,7 +33,9 @@ public class InstitutionService : IInstitutionService
     {
         var entity = await _unitOfWork.Repository<Institution>().GetByIdAsync(id, cancellationToken);
         if (entity is null) return Result.NotFound<InstitutionDto>("Institution", id);
-        return Result.Success(MapToDto(entity));
+
+        var dto = await MapToDtoWithCountAsync(entity, cancellationToken);
+        return Result.Success(dto);
     }
 
     public async Task<Result<InstitutionDto>> CreateAsync(
@@ -56,7 +62,9 @@ public class InstitutionService : IInstitutionService
 
         await _unitOfWork.Repository<Institution>().AddAsync(entity, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
-        return Result.Success(MapToDto(entity));
+
+        var response = await MapToDtoWithCountAsync(entity, cancellationToken);
+        return Result.Success(response);
     }
 
     public async Task<Result<InstitutionDto>> UpdateAsync(
@@ -73,7 +81,9 @@ public class InstitutionService : IInstitutionService
 
         _unitOfWork.Repository<Institution>().Update(entity);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
-        return Result.Success(MapToDto(entity));
+
+        var response = await MapToDtoWithCountAsync(entity, cancellationToken);
+        return Result.Success(response);
     }
 
     public async Task<Result> DeleteAsync(int id, CancellationToken cancellationToken = default)
@@ -86,17 +96,34 @@ public class InstitutionService : IInstitutionService
         return Result.Success();
     }
 
-    private static InstitutionDto MapToDto(Institution i) => new()
+    private async Task<InstitutionDto> MapToDtoWithCountAsync(
+        Institution i, CancellationToken cancellationToken)
     {
-        IdInstitution = i.IdInstitution,
-        Name = i.Name,
-        Domain = i.Domain,
-        Email = i.Email,
-        Phone = i.Phone,
-        Plan = (int)i.Plan,
-        Status = (int)i.Status,
-        UsersCount = 0,   // se puede calcular con un join si se necesita
-        CreatedAt = i.CreatedAt,
-        LastActive = null
-    };
+        var usersCount = 0;
+        usersCount += await _unitOfWork.Repository<Administrator>().Query()
+            .CountAsync(a => a.IdInstitution == i.IdInstitution, cancellationToken);
+        usersCount += await _unitOfWork.Repository<Secretary>().Query()
+            .CountAsync(s => s.IdInstitution == i.IdInstitution, cancellationToken);
+        usersCount += await _unitOfWork.Repository<Professor>().Query()
+            .CountAsync(p => p.IdInstitution == i.IdInstitution, cancellationToken);
+        usersCount += await _unitOfWork.Repository<Student>().Query()
+            .CountAsync(s => s.IdInstitution == i.IdInstitution, cancellationToken);
+        usersCount += await _unitOfWork.Repository<MaintenanceWorker>().Query()
+            .CountAsync(m => m.IdInstitution == i.IdInstitution, cancellationToken);
+        usersCount += await _unitOfWork.Repository<YearHead>().Query()
+            .CountAsync(y => y.IdInstitution == i.IdInstitution, cancellationToken);
+
+        return new InstitutionDto
+        {
+            IdInstitution = i.IdInstitution,
+            Name = i.Name,
+            Domain = i.Domain,
+            Email = i.Email,
+            Phone = i.Phone,
+            Plan = (int)i.Plan,
+            Status = (int)i.Status,
+            CreatedAt = i.CreatedAt,
+            UsersCount = usersCount
+        };
+    }
 }

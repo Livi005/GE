@@ -7,9 +7,10 @@ interface AuthState {
   isDean: boolean;
   institutionId: number | null;
   theme: 'light' | 'dark';
-  login: (token: string, role: string, userName: string, isDean: boolean, institutionId: number | null) => void;
+  login: (token: string, role: string, userName: string, isDean: boolean, institutionId: number | null, theme: 'light' | 'dark') => void;
   logout: () => void;
   toggleTheme: () => void;
+  setTheme: (theme: 'light' | 'dark') => void;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -20,14 +21,15 @@ export const useAuthStore = create<AuthState>((set) => ({
   institutionId: localStorage.getItem('institutionId') ? Number(localStorage.getItem('institutionId')) : null,
   theme: (localStorage.getItem('theme') as 'light' | 'dark') || 'light',
   
-  login: (token, role, userName, isDean, institutionId) => {
+  login: (token, role, userName, isDean, institutionId, theme) => {
     localStorage.setItem('token', token);
     localStorage.setItem('role', role);
     localStorage.setItem('userName', userName);
     localStorage.setItem('isDean', String(isDean));
     if (institutionId) localStorage.setItem('institutionId', String(institutionId));
+    localStorage.setItem('theme', theme); // Sincronizar tema del backend
     
-    set({ token, role, userName, isDean, institutionId });
+    set({ token, role, userName, isDean, institutionId, theme });
   },
   
   logout: () => {
@@ -36,7 +38,8 @@ export const useAuthStore = create<AuthState>((set) => ({
     localStorage.removeItem('userName');
     localStorage.removeItem('isDean');
     localStorage.removeItem('institutionId');
-    set({ token: null, role: null, userName: null, isDean: false, institutionId: null });
+    localStorage.removeItem('theme');
+    set({ token: null, role: null, userName: null, isDean: false, institutionId: null, theme: 'light' });
   },
   
   toggleTheme: () => set((state) => {
@@ -44,4 +47,9 @@ export const useAuthStore = create<AuthState>((set) => ({
     localStorage.setItem('theme', newTheme);
     return { theme: newTheme };
   }),
+
+  setTheme: (theme) => {
+    localStorage.setItem('theme', theme);
+    set({ theme });
+  }
 }));

@@ -5,18 +5,18 @@
 @tailwind utilities;
 
 body {
-  @apply text-slate-800 font-sans antialiased min-h-screen relative;
+  @apply text-slate-900 font-sans antialiased min-h-screen relative;
 }
 
 /* ==========================================
    TARJETAS DE CRISTAL
    ========================================== */
 .glass-card {
-  @apply bg-white/40 backdrop-blur-xl border border-white/60 shadow-[0_8px_32px_rgba(0,0,0,0.05)] rounded-[2rem];
+  @apply bg-white/80 backdrop-blur-xl border border-white/90 shadow-[0_8px_32px_rgba(0,0,0,0.08)] rounded-[2rem];
 }
 
 .dark .glass-card {
-  @apply bg-slate-900/30 backdrop-blur-xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.3)];
+  @apply bg-slate-900/40 backdrop-blur-xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.3)];
 }
 
 /* ==========================================
@@ -27,56 +27,51 @@ body {
 }
 
 /* ==========================================
-   TABLAS EN MODO OSCURO (Textos claros)
+   FORZAR TEXTOS OSCUROS EN MODO CLARO
    ========================================== */
-.dark table th {
-  @apply text-slate-300 border-white/10;
-}
-.dark table td {
-  @apply text-slate-100 border-white/10;
+h1, h2, h3, h4, h5, h6 {
+  @apply text-slate-900;
 }
 
-.dark table tbody tr:hover {
-  @apply bg-white/10;
-}
-
-/* Inputs y Selects en modo oscuro */
-.dark input, 
-.dark select, 
-.dark textarea {
-  @apply text-white bg-slate-800 border-slate-600 placeholder-slate-400;
+p, span, td, th, label, li, a {
+  @apply text-slate-800;
 }
 
 /* ==========================================
-   FORZAR LEGIBILIDAD EN TABLAS MODO OSCURO
+   TABLAS EN MODO CLARO
    ========================================== */
-.dark table th {
-  @apply text-slate-300 border-white/10;
+table th {
+  @apply text-slate-900 font-bold bg-slate-100/50;
+}
+table td {
+  @apply text-slate-800 font-medium;
 }
 
-.dark table td {
-  @apply text-slate-200 border-white/10;
+input, select, textarea {
+  @apply text-slate-900 bg-white/90 border-slate-300 font-medium;
 }
 
-/* Asegurar que el texto dentro de las celdas sea claro */
-.dark table td * {
+/* ==========================================
+   MODO OSCURO
+   ========================================== */
+.dark body {
   @apply text-slate-200;
 }
 
-.dark table td span.text-slate-600 { @apply text-slate-400; }
-.dark table td span.text-slate-800 { @apply text-slate-200; }
-
-.dark table tbody tr:hover {
-  @apply bg-white/10;
+.dark h1, .dark h2, .dark h3, .dark h4, .dark h5, .dark h6 {
+  @apply text-white;
+}
+.dark p, .dark span, .dark td, .dark th, .dark label, .dark li, .dark a {
+  @apply text-slate-200;
 }
 
-/* Arreglar letras en todas las tablas del sistema */
 .dark table th {
-  @apply text-slate-300 border-white/10;
+  @apply text-slate-300 border-white/10 bg-transparent;
 }
 .dark table td {
   @apply text-slate-200 border-white/10;
 }
-.dark table tbody tr:hover {
-  @apply bg-white/10;
+
+.dark input, .dark select, .dark textarea {
+  @apply text-white bg-slate-800 border-slate-600 placeholder-slate-400;
 }

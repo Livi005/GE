@@ -72,4 +72,10 @@ public class IdentityManager : IIdentityManager
         var result = await _userManager.DeleteAsync(user);
         return (result.Succeeded, result.Errors.Select(e => e.Description));
     }
+
+    public async Task<(bool Succeeded, IEnumerable<string> Errors)> UpdateUserAsync(User user)
+    {
+        var result = await _userManager.UpdateAsync(user);
+        return (result.Succeeded, result.Errors.Select(e => e.Description));
+    }
 }

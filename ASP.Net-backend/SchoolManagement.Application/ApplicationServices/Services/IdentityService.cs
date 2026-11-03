@@ -53,19 +53,23 @@ public class IdentityService : IIdentityService
         return (token, created.Id);
     }
 
-    public async Task<(bool Success, string Token, string Role, string UserName, bool IsDean, int? InstitutionId)>
+    public async Task<(bool Success, string Token, string Role, string UserName, bool IsDean, int? InstitutionId, string Theme)>
         CheckCredentialsAsync(LoginDto dto, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(dto.UserName) || string.IsNullOrWhiteSpace(dto.Password))
-            return (false, string.Empty, string.Empty, string.Empty, false, null);
+            return (false, string.Empty, string.Empty, string.Empty, false, null, "light");
 
         var valid = await _identityManager.CheckCredentialsAsync(dto.UserName, dto.Password);
-        if (!valid) return (false, string.Empty, string.Empty, string.Empty, false, null);
+        if (!valid) return (false, string.Empty, string.Empty, string.Empty, false, null, "light");
 
         var user = await _identityManager.FindByUserNameAsync(dto.UserName);
-        if (user is null) return (false, string.Empty, string.Empty, string.Empty, false, null);
+        if (user is null) return (false, string.Empty, string.Empty, string.Empty, false, null, "light");
 
-        // Resolver rol + isDean + institutionId
+        // Tema guardado
+        var prefs = await _unitOfWork.Repository<UserPreferences>().Query()
+            .FirstOrDefaultAsync(p => p.UserId == user.Id, cancellationToken);
+        var theme = prefs?.Theme ?? "light";
+
         foreach (var role in Roles.All)
         {
             if (!await _identityManager.IsInRoleAsync(user.Id, role)) continue;
@@ -113,14 +117,13 @@ public class IdentityService : IIdentityService
                     .FirstOrDefaultAsync(y => y.UserId == user.Id, cancellationToken);
                 if (yh is not null) institutionId = yh.IdInstitution;
             }
-            // SuperAdmin: sin institución, isDean=false
 
             var token = _jwtTokenGenerator.GenerateToken(user, role, isDean, institutionId);
-            return (true, token, role, user.UserName ?? string.Empty, isDean, institutionId);
+            return (true, token, role, user.UserName ?? string.Empty, isDean, institutionId, theme);
         }
 
         _logger.LogWarning("Usuario {UserName} sin rol asignado", dto.UserName);
-        return (false, string.Empty, string.Empty, string.Empty, false, null);
+        return (false, string.Empty, string.Empty, string.Empty, false, null, "light");
     }
 
     public Task<IReadOnlyList<User>> ListUsersAsync(CancellationToken cancellationToken = default)
@@ -142,6 +145,19 @@ public class IdentityService : IIdentityService
         public async Task<Result> DeleteUserAsync(string userId, CancellationToken cancellationToken = default)
     {
         var (succeeded, errors) = await _identityManager.DeleteUserAsync(userId);
+        if (!succeeded)
+            return Result.Failure(Error.Validation(string.Join(", ", errors)));
+
+        return Result.Success();
+    }
+
+        public async Task<Result> DeleteMyAccountAsync(string userName, CancellationToken cancellationToken = default)
+    {
+        var user = await _identityManager.FindByUserNameAsync(userName);
+        if (user is null)
+            return Result.Failure(Error.NotFound("User", userName));
+
+        var (succeeded, errors) = await _identityManager.DeleteUserAsync(user.Id);
         if (!succeeded)
             return Result.Failure(Error.Validation(string.Join(", ", errors)));
 

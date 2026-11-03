@@ -12,7 +12,11 @@ using SchoolManagement.Infrastructure.Identity;
 var builder = WebApplication.CreateBuilder(args);
 
 // ---------- Controllers + ProblemDetails ----------
-builder.Services.AddControllers();
+builder.Services.AddControllers(options =>
+{
+    options.Filters.Add<SchoolManagement.Api.Middleware.AuditLogFilter>();
+});
+builder.Services.AddScoped<SchoolManagement.Api.Middleware.AuditLogFilter>();
 builder.Services.AddProblemDetails();
 
 // ---------- Capas ----------

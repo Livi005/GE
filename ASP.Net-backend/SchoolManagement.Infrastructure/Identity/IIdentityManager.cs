@@ -15,4 +15,6 @@ public interface IIdentityManager
     Task<IReadOnlyList<string>> GetRolesAsync(string userId);
 
     Task<(bool Succeeded, IEnumerable<string> Errors)> DeleteUserAsync(string userId);
+
+    Task<(bool Succeeded, IEnumerable<string> Errors)> UpdateUserAsync(User user);
 }

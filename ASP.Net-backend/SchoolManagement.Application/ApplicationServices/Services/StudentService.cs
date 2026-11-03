@@ -9,6 +9,7 @@ using SchoolManagement.Domain.Entities;
 using SchoolManagement.Domain.Relations;
 using SchoolManagement.Infrastructure.Common.GenericInterface;
 using SchoolManagement.Infrastructure.Identity;
+using SchoolManagement.Application.ApplicationServices.Maps_Dto.Dashboard;
 
 namespace SchoolManagement.Application.ApplicationServices.Services;
 
@@ -191,4 +192,49 @@ public class StudentService
 
         return Result.Success<IReadOnlyList<StudentGradeDto>>(grades);
     }
+
+    public async Task<Result<IReadOnlyList<StudentProfessorDto>>> GetMyProfessorsAsync(
+        string userName, CancellationToken cancellationToken = default)
+    {
+        var user = await _identityManager.FindByUserNameAsync(userName);
+        if (user is null)
+            return Result.NotFound<IReadOnlyList<StudentProfessorDto>>("User", userName);
+
+        var student = await UnitOfWork.Repository<Student>().Query()
+            .FirstOrDefaultAsync(s => s.UserId == user.Id, cancellationToken);
+        if (student is null)
+            return Result.NotFound<IReadOnlyList<StudentProfessorDto>>("Student", userName);
+
+        var subjectIds = await UnitOfWork.Repository<StudentSubject>().Query()
+            .Where(ss => ss.IdStud == student.IdStud)
+            .Select(ss => ss.IdSub)
+            .ToListAsync(cancellationToken);
+
+        var professorSubjects = await UnitOfWork.Repository<ProfessorSubject>().Query()
+            .Include(ps => ps.Professor)
+            .Include(ps => ps.Subject)
+            .Where(ps => subjectIds.Contains(ps.IdSub))
+            .ToListAsync(cancellationToken);
+
+        var result = new List<StudentProfessorDto>();
+        foreach (var ps in professorSubjects)
+        {
+            var ratings = await UnitOfWork.Repository<ProfessorEvaluation>().Query()
+                .Where(e => e.IdProf == ps.IdProf)
+                .Select(e => e.Rating)
+                .ToListAsync(cancellationToken);
+            var avgRating = ratings.Count == 0 ? 0 : Math.Round(ratings.Average(), 1);
+
+            result.Add(new StudentProfessorDto
+            {
+                Id = ps.IdProf,
+                Name = ps.Professor?.NameProf ?? "",
+                Subject = ps.Subject?.NameSub ?? "",
+                Rating = avgRating
+            });
+        }
+
+        return Result.Success<IReadOnlyList<StudentProfessorDto>>(result);
+    }
+
 }

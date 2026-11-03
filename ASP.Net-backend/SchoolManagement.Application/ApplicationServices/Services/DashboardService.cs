@@ -21,7 +21,7 @@ public class DashboardService : IDashboardService
         _identityManager = identityManager;
     }
 
-        public async Task<Result<StudentDashboardDto>> GetStudentDashboardAsync(string userName)
+    public async Task<Result<StudentDashboardDto>> GetStudentDashboardAsync(string userName)
     {
         var user = await _identityManager.FindByUserNameAsync(userName);
         if (user is null) return Result.NotFound<StudentDashboardDto>("User", userName);
@@ -32,14 +32,77 @@ public class DashboardService : IDashboardService
 
         if (student is null) return Result.NotFound<StudentDashboardDto>("Student", userName);
 
+        // ---------- Notas ----------
         var grades = await _unitOfWork.Repository<ProfessorStudentSubject>().Query()
             .Include(pss => pss.StudentSubject).ThenInclude(ss => ss.Subject)
+            .Include(pss => pss.Professor)
             .Where(pss => pss.StudentSubject.IdStud == student.IdStud)
             .Select(pss => new GradeSummaryDto
             {
                 SubjectName = pss.StudentSubject.Subject.NameSub,
-                Grade = pss.StudentGrades
-            }).ToListAsync();
+                Grade = pss.StudentGrades,
+                TeacherName = pss.Professor.NameProf
+            })
+            .ToListAsync();
+
+        // ---------- Horario de hoy ----------
+        var subjectIds = await _unitOfWork.Repository<StudentSubject>().Query()
+            .Where(ss => ss.IdStud == student.IdStud)
+            .Select(ss => ss.IdSub)
+            .ToListAsync();
+
+        var todayDow = DateTime.UtcNow.DayOfWeek;
+        var todaySchedules = await _unitOfWork.Repository<Schedule>().Query()
+            .Include(s => s.Subject)
+            .Include(s => s.ClassRoom)
+            .Where(s => subjectIds.Contains(s.IdSub) && s.Day == todayDow)
+            .OrderBy(s => s.StartTime)
+            .ToListAsync();
+
+        var scheduleDtos = todaySchedules.Select(s => new TodayScheduleItemDto
+        {
+            IdSchedule = s.IdSchedule,
+            Subject = s.Subject?.NameSub ?? "",
+            Time = $"{s.StartTime:hh\\:mm} - {s.EndTime:hh\\:mm}",
+            Room = s.ClassRoom?.Location ?? "",
+            Type = "class"
+        }).ToList();
+
+        // ---------- Profesores con rating ----------
+        var professorSubjects = await _unitOfWork.Repository<ProfessorSubject>().Query()
+            .Include(ps => ps.Professor)
+            .Include(ps => ps.Subject)
+            .Where(ps => subjectIds.Contains(ps.IdSub))
+            .ToListAsync();
+
+        var professorDtos = new List<StudentProfessorDto>();
+        foreach (var ps in professorSubjects)
+        {
+            var ratings = await _unitOfWork.Repository<ProfessorEvaluation>().Query()
+                .Where(e => e.IdProf == ps.IdProf)
+                .Select(e => e.Rating)
+                .ToListAsync();
+            var avgRating = ratings.Count == 0 ? 0 : Math.Round(ratings.Average(), 1);
+
+            professorDtos.Add(new StudentProfessorDto
+            {
+                Id = ps.IdProf,
+                Name = ps.Professor?.NameProf ?? "",
+                Subject = ps.Subject?.NameSub ?? "",
+                Rating = avgRating
+            });
+        }
+
+        // ---------- Promedio y asistencia ----------
+        var avgGrade = grades.Count == 0 ? 0 : Math.Round(grades.Average(g => g.Grade), 2);
+
+        var totalAtt = await _unitOfWork.Repository<Attendance>().Query()
+            .Where(a => a.IdStud == student.IdStud)
+            .CountAsync();
+        var presentAtt = await _unitOfWork.Repository<Attendance>().Query()
+            .Where(a => a.IdStud == student.IdStud && a.Status == AttendanceStatus.Present)
+            .CountAsync();
+        var attendancePct = totalAtt == 0 ? 0 : (int)Math.Round(presentAtt * 100.0 / totalAtt);
 
         var fullName = $"{student.Name1} {student.LastName1}".Trim();
 
@@ -47,7 +110,11 @@ public class DashboardService : IDashboardService
         {
             StudentName = fullName,
             CourseName = student.Course?.CourseName ?? "Sin curso",
-            Grades = grades
+            Grades = grades,
+            Schedule = scheduleDtos,
+            Professors = professorDtos,
+            AverageGrade = avgGrade,
+            AttendancePercentage = attendancePct
         });
     }
 
@@ -61,15 +128,13 @@ public class DashboardService : IDashboardService
 
         if (professor is null) return Result.NotFound<ProfessorDashboardDto>("Professor", userName);
 
-        // Contamos sus asignaturas
-        var totalSubjects = await _unitOfWork.Repository<ProfessorSubject>().Query()
-            .CountAsync(ps => ps.IdProf == professor.IdProf);
-
-        // Contamos estudiantes únicos en sus asignaturas
+        // Asignaturas del profesor
         var subjectIds = await _unitOfWork.Repository<ProfessorSubject>().Query()
             .Where(ps => ps.IdProf == professor.IdProf)
             .Select(ps => ps.IdSub)
             .ToListAsync();
+
+        var totalSubjects = subjectIds.Count;
 
         var totalStudents = await _unitOfWork.Repository<StudentSubject>().Query()
             .Where(ss => subjectIds.Contains(ss.IdSub))
@@ -77,22 +142,48 @@ public class DashboardService : IDashboardService
             .Distinct()
             .CountAsync();
 
-        // Contamos cuántas notas le faltan poner (ejemplo: alumnos sin nota en sus materias)
         var pendingGrades = await _unitOfWork.Repository<StudentSubject>().Query()
             .Where(ss => subjectIds.Contains(ss.IdSub))
             .Where(ss => !_unitOfWork.Repository<ProfessorStudentSubject>().Query()
                 .Any(pss => pss.IdStudSub == ss.IdStudSub && pss.IdProf == professor.IdProf))
             .CountAsync();
 
+        // Clases de hoy
+        var todayDow = DateTime.UtcNow.DayOfWeek;
+        var todaySchedules = await _unitOfWork.Repository<Schedule>().Query()
+            .Include(s => s.Subject)
+            .Include(s => s.ClassRoom)
+            .Where(s => s.IdProf == professor.IdProf && s.Day == todayDow)
+            .OrderBy(s => s.StartTime)
+            .ToListAsync();
+
+        var todayClasses = new List<TodayClassDto>();
+        foreach (var sch in todaySchedules)
+        {
+            var studentsInSub = await _unitOfWork.Repository<StudentSubject>().Query()
+                .CountAsync(ss => ss.IdSub == sch.IdSub);
+            todayClasses.Add(new TodayClassDto
+            {
+                IdSub = sch.IdSub,
+                NameSub = sch.Subject?.NameSub ?? "",
+                Grade = sch.Subject?.StudyProgram ?? "",
+                Students = studentsInSub,
+                NextClass = $"{sch.StartTime:hh\\:mm} - {sch.EndTime:hh\\:mm}",
+                Room = sch.ClassRoom?.Location ?? ""
+            });
+        }
+
         return Result.Success(new ProfessorDashboardDto
         {
             ProfessorName = professor.NameProf,
             TotalSubjects = totalSubjects,
             TotalStudents = totalStudents,
-            PendingGrades = pendingGrades
+            PendingGrades = pendingGrades,
+            TodayClasses = todayClasses
         });
     }
 
+    
     public async Task<Result<IReadOnlyList<ClassRoomAvailabilityDto>>> GetAvailableClassRoomsAsync()
     {
         var availableRooms = await _unitOfWork.Repository<ClassRoom>().Query()

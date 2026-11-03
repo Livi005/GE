@@ -21,4 +21,9 @@ public class ReservationController : ControllerBase
     [HttpDelete("cancel/{id:int}")]
     public async Task<IActionResult> Cancel(int id, CancellationToken ct)
         => this.ToActionResult(await _service.CancelAsync(id, ct));
+
+    [HttpGet("available")]
+    [Authorize(Roles = $"{Roles.SuperAdmin},{Roles.Director},{Roles.Professor}")]
+    public async Task<IActionResult> GetAvailable(CancellationToken ct)
+        => this.ToActionResult(await _service.GetAvailableResourcesAsync(ct));
 }

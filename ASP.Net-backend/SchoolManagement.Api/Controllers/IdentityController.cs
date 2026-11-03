@@ -31,7 +31,7 @@ public class IdentityController : ControllerBase
     [AllowAnonymous]
     public async Task<IActionResult> Login([FromBody] LoginDto dto, CancellationToken ct)
     {
-        var (success, token, role, userName, isDean, institutionId) =
+        var (success, token, role, userName, isDean, institutionId, theme) =
             await _service.CheckCredentialsAsync(dto, ct);
 
         if (!success)
@@ -43,7 +43,8 @@ public class IdentityController : ControllerBase
             role,
             userName,
             isDean,
-            institutionId
+            institutionId,
+            theme
         });
     }
 
@@ -67,4 +68,9 @@ public class IdentityController : ControllerBase
     [Authorize(Roles = Roles.SuperAdmin)]
     public async Task<IActionResult> DeleteUser(string userId, CancellationToken ct)
         => this.ToActionResult(await _service.DeleteUserAsync(userId, ct));
+
+    [HttpDelete("me")]
+    [Authorize]
+    public async Task<IActionResult> DeleteMyAccount([FromQuery] string userName, CancellationToken ct)
+        => this.ToActionResult(await _service.DeleteMyAccountAsync(userName, ct));
 }

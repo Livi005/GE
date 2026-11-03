@@ -9,7 +9,7 @@ public interface IIdentityService
 {
     Task<(string Token, string UserId)> CreateUserAsync(RegisterDto dto, CancellationToken cancellationToken = default);
 
-    Task<(bool Success, string Token, string Role, string UserName, bool IsDean, int? InstitutionId)>
+    Task<(bool Success, string Token, string Role, string UserName, bool IsDean, int? InstitutionId, string Theme)>
         CheckCredentialsAsync(LoginDto dto, CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<User>> ListUsersAsync(CancellationToken cancellationToken = default);
@@ -17,4 +17,6 @@ public interface IIdentityService
     Task<Result> ChangePasswordAsync(string userName, ChangePasswordDto dto, CancellationToken cancellationToken = default);
 
     Task<Result> DeleteUserAsync(string userId, CancellationToken cancellationToken = default);
+
+    Task<Result> DeleteMyAccountAsync(string userName, CancellationToken cancellationToken = default);
 }

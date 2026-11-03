@@ -47,4 +47,9 @@ public class StudentController : ControllerBase
     [Authorize(Roles = $"{Roles.Student},{Roles.SuperAdmin}")]
     public async Task<IActionResult> GetMyGrades([FromQuery] string userName, CancellationToken ct)
         => this.ToActionResult(await _service.GetMyGradesAsync(userName, ct));
+
+    [HttpGet("my-professors")]
+    [Authorize(Roles = $"{Roles.Student},{Roles.SuperAdmin}")]
+    public async Task<IActionResult> GetMyProfessors([FromQuery] string userName, CancellationToken ct)
+        => this.ToActionResult(await _service.GetMyProfessorsAsync(userName, ct));
 }

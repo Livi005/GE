@@ -9,7 +9,7 @@ export default function MaintenanceDashboard() {
   const [error, setError] = useState(false);
 
   useEffect(() => {
-    apiClient.get('/api/dashboard/maintenance')
+    apiClient.get('/dashboard/maintenance')
       .then(res => setData(res.data))
       .catch(err => { console.error(err); setError(true); })
       .finally(() => setLoading(false));

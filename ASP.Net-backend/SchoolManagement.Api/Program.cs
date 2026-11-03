@@ -120,3 +120,6 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+
+// Permite que WebApplicationFactory inicie la API en las pruebas HTTP.
+public partial class Program { }

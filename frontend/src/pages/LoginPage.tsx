@@ -40,7 +40,12 @@ export default function LoginPage() {
       }
     } catch (err: any) {
       console.error(err);
-      setError(err.response?.data?.detail || 'Usuario o contraseña incorrectos.');
+      // Si el backend devuelve 401 o 404, el usuario no existe o está borrado
+      if (err.response?.status === 401 || err.response?.status === 404) {
+        setError('Usuario o contraseña incorrectos. Si tu cuenta fue eliminada, contacta al administrador.');
+      } else {
+        setError(err.response?.data?.detail || 'Ocurrió un error al iniciar sesión. Intenta de nuevo.');
+      }
     } finally {
       setLoading(false);
     }
